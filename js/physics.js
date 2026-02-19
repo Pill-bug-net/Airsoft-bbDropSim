@@ -37,6 +37,85 @@ function barrelCorrectedVelocity(baseVelocity, barrelMm) {
 }
 
 // ============================================================
+//  銃機種プリセット (実在機種を参考にしたスペック)
+//  barrelMm    : インナーバレル長さ
+//  boreMm      : ボア内径 (実測値の代表値)
+//  baseVelocity: 0.20g BB での代表初速 m/s (0.98J 以下)
+// ============================================================
+const GUN_PRESETS = {
+  custom:    { name: 'カスタム',              barrelMm: 300, boreMm: 6.08, baseVelocity: 90 },
+  tm_m4a1:   { name: 'Tokyo Marui M4A1',     barrelMm: 509, boreMm: 6.08, baseVelocity: 88 },
+  tm_akm:    { name: 'Tokyo Marui AKM',      barrelMm: 455, boreMm: 6.08, baseVelocity: 87 },
+  gg_cm16:   { name: 'G&G CM16 Raider',      barrelMm: 363, boreMm: 6.03, baseVelocity: 90 },
+  ca_m15a4:  { name: 'Classic Army M15A4',   barrelMm: 509, boreMm: 6.04, baseVelocity: 91 },
+  tm_mp5a5:  { name: 'Tokyo Marui MP5A5',    barrelMm: 229, boreMm: 6.08, baseVelocity: 85 },
+  kwa_mp7:   { name: 'KWA MP7A1',            barrelMm: 180, boreMm: 6.05, baseVelocity: 78 },
+  well_mb01: { name: 'WELL MB01 スナイパー',  barrelMm: 650, boreMm: 6.01, baseVelocity: 95 },
+};
+
+// ============================================================
+//  ボア径別仕様
+//    velBonus   : ボア速度補正率 (タイトボアは気密↑→初速わずかに向上)
+//    scatter    : 角度散布 σ (度) — BB径ばらつき・バレル直進度誤差
+//    velScatter : 速度散布 σ (率) — 気密一貫性・BB重量誤差
+// ============================================================
+const BORE_SPECS = {
+  6.01: { label: 'タイトボア',  velBonus: 0.025, scatter: 0.04, velScatter: 0.004 },
+  6.03: { label: 'タイト',      velBonus: 0.015, scatter: 0.07, velScatter: 0.007 },
+  6.04: { label: '精密',        velBonus: 0.008, scatter: 0.09, velScatter: 0.009 },
+  6.05: { label: '標準+',       velBonus: 0.003, scatter: 0.11, velScatter: 0.011 },
+  6.08: { label: 'ノーマルボア', velBonus: 0.000, scatter: 0.15, velScatter: 0.015 },
+};
+
+// boreMm に最も近いキーの仕様を返す
+function getBoreSpec(boreMm) {
+  const keys = Object.keys(BORE_SPECS).map(Number);
+  const closest = keys.reduce((a, b) =>
+    Math.abs(a - boreMm) <= Math.abs(b - boreMm) ? a : b
+  );
+  return BORE_SPECS[closest];
+}
+
+// ボア種別の速度ボーナス係数
+function boreVelocityBonus(boreMm) {
+  return getBoreSpec(boreMm).velBonus;
+}
+
+// ============================================================
+//  製造誤差 + BB 個体差による 1 発ごとのスキャター
+//
+//  モデル化した誤差要因:
+//    ・ボア内径公差 (±0.01mm) → BB ガタつき → 角度散布
+//    ・バレル直進度誤差        → 角度散布 (短いほど大)
+//    ・BB 重量ばらつき         → 速度散布
+//    ・Hop-Up ゴム一貫性       → 散布 (ここではボア径で近似)
+//
+//  @param {number} boreMm    - ボア内径 mm
+//  @param {number} barrelMm  - バレル長 mm
+//  @returns {{ dPitch: rad, dYaw: rad, velFactor: number }}
+// ============================================================
+function shotScatter(boreMm, barrelMm) {
+  const spec = getBoreSpec(boreMm);
+
+  // バレルが短いほど散布増加 (基準 300mm)
+  const barrelFactor = Math.sqrt(300 / Math.max(barrelMm, 50));
+  const scatterRad   = spec.scatter * barrelFactor * Math.PI / 180;
+
+  // Box-Muller 法でガウス乱数 2 個生成
+  const u1 = Math.max(1e-10, Math.random());
+  const u2 = Math.random();
+  const r  = Math.sqrt(-2 * Math.log(u1));
+  const n1 = r * Math.cos(2 * Math.PI * u2);
+  const n2 = r * Math.sin(2 * Math.PI * u2);
+
+  return {
+    dPitch:    n1 * scatterRad,                                          // rad
+    dYaw:      n2 * scatterRad,                                          // rad
+    velFactor: 1.0 + (Math.random() - 0.5) * 2 * spec.velScatter,       // 倍率
+  };
+}
+
+// ============================================================
 class BBPhysics {
   /**
    * @param {number}   initialSpeed  - 初速 m/s (バレル補正・法的クランプ済)

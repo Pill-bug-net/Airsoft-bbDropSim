@@ -27,6 +27,7 @@
     <span id="hud-fps">FPS: --</span>
     <span id="hud-range">射程: -- m</span>
     <span id="hud-hopup">HopUp: 0%</span>
+    <span id="hud-tremor">[立射] ±0.00°</span>
   </div>
 
   <!-- ══════════════════════════════════════════
@@ -40,6 +41,23 @@
   <div id="property-panel">
 
     <div class="panel-title">&#x1F52B; BB Drop Sim</div>
+
+    <!-- ── 銃機種プリセット ── -->
+    <div class="prop-section">
+      <div class="prop-label">銃機種プリセット</div>
+      <select id="gun-preset" style="width:100%;background:#001a0a;color:#ccffdd;border:1px solid rgba(0,255,136,0.35);padding:5px 6px;font-size:11px;font-family:monospace;border-radius:3px;cursor:pointer">
+        <option value="custom">カスタム</option>
+        <option value="tm_m4a1">Tokyo Marui M4A1 (509mm)</option>
+        <option value="tm_akm">Tokyo Marui AKM (455mm)</option>
+        <option value="gg_cm16">G&amp;G CM16 Raider (363mm)</option>
+        <option value="ca_m15a4">Classic Army M15A4 (509mm)</option>
+        <option value="tm_mp5a5">Tokyo Marui MP5A5 (229mm)</option>
+        <option value="kwa_mp7">KWA MP7A1 (180mm)</option>
+        <option value="well_mb01">WELL MB01 スナイパー (650mm)</option>
+      </select>
+    </div>
+
+    <hr class="divider">
 
     <!-- ── BB 重量 ── -->
     <div class="prop-section">
@@ -104,6 +122,19 @@
       </div>
     </div>
 
+    <!-- ── ボア径 (製造誤差) ── -->
+    <div class="prop-section">
+      <div class="prop-label">バレルボア径</div>
+      <select id="bore-select" style="width:100%;background:#001a0a;color:#00ff88;border:1px solid rgba(0,255,136,0.35);padding:4px 6px;font-size:11px;font-family:monospace;border-radius:3px;cursor:pointer">
+        <option value="6.01">6.01mm — タイトボア</option>
+        <option value="6.03">6.03mm — タイト</option>
+        <option value="6.04">6.04mm — 精密</option>
+        <option value="6.05">6.05mm — 標準+</option>
+        <option value="6.08" selected>6.08mm — ノーマルボア</option>
+      </select>
+      <div id="bore-info" style="font-size:10px;color:#556655;margin-top:2px">散布σ: ±0.15° / 速度誤差: ±1.5%</div>
+    </div>
+
     <hr class="divider">
 
     <!-- ── 実際の初速 (法定クランプ後) ── -->
@@ -133,6 +164,32 @@
         <span class="val-display" id="wind-dir-val">0°</span>
       </div>
       <div style="font-size:10px;color:#556655">0°=正面 90°=右 180°=後 270°=左</div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── 射撃姿勢 ── -->
+    <div class="prop-section">
+      <div class="prop-label">射撃姿勢</div>
+      <div class="radio-group">
+        <label><input type="radio" name="stance" value="prone"> 伏射</label>
+        <label><input type="radio" name="stance" value="kneeling"> 膝射</label>
+        <label><input type="radio" name="stance" value="standing" checked> 立射</label>
+      </div>
+      <div style="font-size:10px;color:#556655">揺れ幅: 伏射×0.2 / 膝射×0.5 / 立射×1.0</div>
+    </div>
+
+    <!-- ── 手振れシミュレーション ── -->
+    <div class="prop-section">
+      <div class="prop-label">手振れ / 動揺</div>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text)">
+        <input type="checkbox" id="tremor-toggle" checked style="accent-color:#00ff88;width:14px;height:14px">
+        呼吸 / 心拍 / 手振れ ON
+      </label>
+      <div style="font-size:10px;color:#556655;margin-top:2px">
+        呼吸±0.25° 心拍±0.05° 手振れ±0.06°<br>
+        ※ HUD に現在の揺れ角表示
+      </div>
     </div>
 
     <hr class="divider">

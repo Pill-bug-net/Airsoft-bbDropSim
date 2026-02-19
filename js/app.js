@@ -49,7 +49,9 @@ class App {
       sceneManager.camera,
       uiManager.mass,
       uiManager.getWindVelocity(),
-      uiManager.spinTiltDeg
+      uiManager.spinTiltDeg,
+      uiManager.boreMm,          // ボア内径 (製造誤差スキャター用)
+      uiManager.barrelMm         // バレル長 (製造誤差スキャター用)
     );
     this.activeBBs.push(bb);
   }

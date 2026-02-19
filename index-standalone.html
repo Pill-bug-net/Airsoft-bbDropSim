@@ -6,7 +6,7 @@
   <title>Airsoft BB Drop Sim</title>
   <style>
 /* ============================================================
-   Airsoft BB Drop Sim — スタイルシート (インライン)
+   Airsoft BB Drop Sim — スタイルシート
    ============================================================ */
 
 *, *::before, *::after {
@@ -37,6 +37,9 @@ html, body {
   user-select: none;
 }
 
+/* ──────────────────────────────────────────
+   Three.js キャンバスコンテナ (全画面)
+   ────────────────────────────────────────── */
 #canvas-container {
   position: fixed;
   inset: 0;
@@ -48,6 +51,9 @@ html, body {
   height: 100% !important;
 }
 
+/* ──────────────────────────────────────────
+   スコープオーバーレイ (右クリック)
+   ────────────────────────────────────────── */
 #scope-overlay {
   position: fixed;
   inset: 0;
@@ -64,6 +70,9 @@ html, body {
   height: 100%;
 }
 
+/* ──────────────────────────────────────────
+   HUD (左上)
+   ────────────────────────────────────────── */
 #hud {
   position: fixed;
   top: 14px;
@@ -86,6 +95,9 @@ html, body {
   white-space: nowrap;
 }
 
+/* ──────────────────────────────────────────
+   2D 弾道グラフ (左下)
+   ────────────────────────────────────────── */
 #trajectory-canvas {
   position: fixed;
   bottom: 14px;
@@ -98,6 +110,9 @@ html, body {
   pointer-events: none;
 }
 
+/* ──────────────────────────────────────────
+   Property パネル (右端、縦スクロール)
+   ────────────────────────────────────────── */
 #property-panel {
   position: fixed;
   top: 0;
@@ -115,10 +130,12 @@ html, body {
   gap: 14px;
 }
 
+/* スクロールバー */
 #property-panel::-webkit-scrollbar { width: 4px; }
 #property-panel::-webkit-scrollbar-track  { background: #001a0a; }
 #property-panel::-webkit-scrollbar-thumb  { background: var(--green-dim); border-radius: 2px; }
 
+/* パネルタイトル */
 .panel-title {
   font-size: 14px;
   font-weight: bold;
@@ -129,6 +146,7 @@ html, body {
   border-bottom: 1px solid var(--panel-border);
 }
 
+/* セクション */
 .prop-section {
   display: flex;
   flex-direction: column;
@@ -142,6 +160,7 @@ html, body {
   letter-spacing: 0.5px;
 }
 
+/* ラジオボタングループ */
 .radio-group {
   display: flex;
   gap: 8px;
@@ -169,6 +188,7 @@ html, body {
   accent-color: var(--green);
 }
 
+/* スライダー */
 .prop-row {
   display: flex;
   align-items: center;
@@ -190,11 +210,13 @@ html, body {
   white-space: nowrap;
 }
 
+/* 法定上限速度 */
 #legal-max {
   font-size: 11px;
   color: #aaffcc;
 }
 
+/* ── 実際の初速ボックス ── */
 .muzzle-box {
   background: rgba(0,255,136,0.06);
   border: 1px solid var(--panel-border);
@@ -231,6 +253,7 @@ html, body {
   margin-top: 2px;
 }
 
+/* ── 風向きアイコン ── */
 .wind-row {
   display: flex;
   align-items: center;
@@ -245,12 +268,14 @@ html, body {
   color: #00e5ff;
 }
 
+/* ── 区切り線 ── */
 .divider {
   border: none;
   border-top: 1px solid var(--panel-border);
   margin: 2px 0;
 }
 
+/* ── 操作説明 ── */
 .hint-box {
   background: rgba(0,0,0,0.4);
   border-radius: 4px;
@@ -267,36 +292,77 @@ html, body {
 </head>
 <body>
 
+  <!-- ══════════════════════════════════════════
+       Three.js 3D キャンバス (全画面)
+       ══════════════════════════════════════════ -->
   <div id="canvas-container"></div>
 
+  <!-- ══════════════════════════════════════════
+       スコープオーバーレイ (右クリックで表示)
+       ══════════════════════════════════════════ -->
   <div id="scope-overlay" class="hidden">
     <canvas id="scope-canvas"></canvas>
   </div>
 
+  <!-- ══════════════════════════════════════════
+       HUD (左上)
+       ══════════════════════════════════════════ -->
   <div id="hud">
     <span id="hud-fps">FPS: --</span>
     <span id="hud-range">射程: -- m</span>
     <span id="hud-hopup">HopUp: 0%</span>
+    <span id="hud-tremor">[立射] ±0.00°</span>
   </div>
 
+  <!-- ══════════════════════════════════════════
+       2D 弾道グラフ (左下)
+       ══════════════════════════════════════════ -->
   <canvas id="trajectory-canvas" width="300" height="190"></canvas>
 
+  <!-- ══════════════════════════════════════════
+       Property パネル (右側)
+       ══════════════════════════════════════════ -->
   <div id="property-panel">
 
     <div class="panel-title">&#x1F52B; BB Drop Sim</div>
 
+    <!-- ── 銃機種プリセット ── -->
+    <div class="prop-section">
+      <div class="prop-label">銃機種プリセット</div>
+      <select id="gun-preset" style="width:100%;background:#001a0a;color:#ccffdd;border:1px solid rgba(0,255,136,0.35);padding:5px 6px;font-size:11px;font-family:monospace;border-radius:3px;cursor:pointer">
+        <option value="custom">カスタム</option>
+        <option value="tm_m4a1">Tokyo Marui M4A1 (509mm)</option>
+        <option value="tm_akm">Tokyo Marui AKM (455mm)</option>
+        <option value="gg_cm16">G&amp;G CM16 Raider (363mm)</option>
+        <option value="ca_m15a4">Classic Army M15A4 (509mm)</option>
+        <option value="tm_mp5a5">Tokyo Marui MP5A5 (229mm)</option>
+        <option value="kwa_mp7">KWA MP7A1 (180mm)</option>
+        <option value="well_mb01">WELL MB01 スナイパー (650mm)</option>
+      </select>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── BB 重量 ── -->
     <div class="prop-section">
       <div class="prop-label">BB Weight</div>
       <div class="radio-group">
-        <label><input type="radio" name="bb-weight" value="0.20" checked> 0.20g</label>
-        <label><input type="radio" name="bb-weight" value="0.25"> 0.25g</label>
-        <label><input type="radio" name="bb-weight" value="0.28"> 0.28g</label>
+        <label>
+          <input type="radio" name="bb-weight" value="0.20" checked> 0.20g
+        </label>
+        <label>
+          <input type="radio" name="bb-weight" value="0.25"> 0.25g
+        </label>
+        <label>
+          <input type="radio" name="bb-weight" value="0.28"> 0.28g
+        </label>
       </div>
       <div id="legal-max">法定上限: -- m/s</div>
     </div>
 
     <hr class="divider">
 
+    <!-- ── HopUp 強度 ── -->
     <div class="prop-section">
       <div class="prop-label">HopUp 強度</div>
       <div class="prop-row">
@@ -305,6 +371,7 @@ html, body {
       </div>
     </div>
 
+    <!-- ── HopUp 方向 (スピン軸傾き) ── -->
     <div class="prop-section">
       <div class="prop-label">HopUp 方向 (スピン軸)</div>
       <div class="prop-row">
@@ -319,6 +386,7 @@ html, body {
 
     <hr class="divider">
 
+    <!-- ── 基本初速 ── -->
     <div class="prop-section">
       <div class="prop-label">Base Velocity</div>
       <div class="prop-row">
@@ -329,6 +397,7 @@ html, body {
 
     <hr class="divider">
 
+    <!-- ── バレル長 ── -->
     <div class="prop-section">
       <div class="prop-label">Barrel Length</div>
       <div class="prop-row">
@@ -337,8 +406,22 @@ html, body {
       </div>
     </div>
 
+    <!-- ── ボア径 (製造誤差) ── -->
+    <div class="prop-section">
+      <div class="prop-label">バレルボア径</div>
+      <select id="bore-select" style="width:100%;background:#001a0a;color:#00ff88;border:1px solid rgba(0,255,136,0.35);padding:4px 6px;font-size:11px;font-family:monospace;border-radius:3px;cursor:pointer">
+        <option value="6.01">6.01mm — タイトボア</option>
+        <option value="6.03">6.03mm — タイト</option>
+        <option value="6.04">6.04mm — 精密</option>
+        <option value="6.05">6.05mm — 標準+</option>
+        <option value="6.08" selected>6.08mm — ノーマルボア</option>
+      </select>
+      <div id="bore-info" style="font-size:10px;color:#556655;margin-top:2px">散布σ: ±0.15° / 速度誤差: ±1.5%</div>
+    </div>
+
     <hr class="divider">
 
+    <!-- ── 実際の初速 (法定クランプ後) ── -->
     <div class="muzzle-box">
       <div class="mv-label">Muzzle Velocity (実初速)</div>
       <div id="muzzle-velocity">-- m/s</div>
@@ -348,6 +431,7 @@ html, body {
 
     <hr class="divider">
 
+    <!-- ── 風 ── -->
     <div class="prop-section">
       <div class="prop-label">Wind Speed</div>
       <div class="prop-row">
@@ -368,6 +452,33 @@ html, body {
 
     <hr class="divider">
 
+    <!-- ── 射撃姿勢 ── -->
+    <div class="prop-section">
+      <div class="prop-label">射撃姿勢</div>
+      <div class="radio-group">
+        <label><input type="radio" name="stance" value="prone"> 伏射</label>
+        <label><input type="radio" name="stance" value="kneeling"> 膝射</label>
+        <label><input type="radio" name="stance" value="standing" checked> 立射</label>
+      </div>
+      <div style="font-size:10px;color:#556655">揺れ幅: 伏射×0.2 / 膝射×0.5 / 立射×1.0</div>
+    </div>
+
+    <!-- ── 手振れシミュレーション ── -->
+    <div class="prop-section">
+      <div class="prop-label">手振れ / 動揺</div>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text)">
+        <input type="checkbox" id="tremor-toggle" checked style="accent-color:#00ff88;width:14px;height:14px">
+        呼吸 / 心拍 / 手振れ ON
+      </label>
+      <div style="font-size:10px;color:#556655;margin-top:2px">
+        呼吸±0.25° 心拍±0.05° 手振れ±0.06°<br>
+        ※ HUD に現在の揺れ角表示
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── 操作説明 ── -->
     <div class="hint-box">
       <strong>左クリック</strong>: 発射<br>
       <strong>右クリック</strong>: スコープ表示<br>
@@ -377,9 +488,11 @@ html, body {
       &nbsp;銃刀法: E &lt; 0.98 J
     </div>
 
-  </div>
+  </div><!-- /property-panel -->
 
-  <!-- Three.js CDN (インターネット接続が必要) -->
+  <!-- ══════════════════════════════════════════
+       ライブラリ読み込み (Three.js r128)
+       ══════════════════════════════════════════ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <!-- ══ 全 JS をインライン化 ══ -->
@@ -387,42 +500,141 @@ html, body {
 'use strict';
 
 // ============================================================
-//  physics.js — BBPhysics クラス
+//  BBPhysics — 純粋物理計算クラス (Three.js 依存なし)
+//  BB弾: 0.20g / 0.25g / 0.28g, 直径 6mm
+//  物理: 重力 + 空気抵抗(風相対速度) + マグナス力(HopUp)
+//  日本法律: 運動エネルギー < 0.98 J (銃刀法)
 // ============================================================
 
 const BB_CONST = {
-  radius:      0.003,
-  airDensity:  1.293,
-  Cd:          0.47,
-  crossArea:   Math.PI * 0.003 * 0.003,
-  gravity:     9.8,
-  dt:          1 / 60,
-  maxRange:    100,
-  legalMaxJ:   0.98,
+  radius:      0.003,                           // m (直径 6mm)
+  airDensity:  1.293,                           // kg/m³
+  Cd:          0.47,                            // 球の抗力係数
+  crossArea:   Math.PI * 0.003 * 0.003,         // ≈ 2.827e-5 m²
+  gravity:     9.8,                             // m/s²
+  dt:          1 / 60,                          // s/ティック
+  maxRange:    100,                             // m (これを超えたら廃棄)
+  legalMaxJ:   0.98,                            // J (銃刀法上限)
 };
 
+// BB重量ごとの法定上限初速を計算して返す
 function legalMaxVelocity(massKg) {
   return Math.sqrt(2 * BB_CONST.legalMaxJ / massKg);
 }
 
+// BBの重さ定数
 const BB_WEIGHTS = {
   '0.20': 0.0002,
   '0.25': 0.00025,
   '0.28': 0.00028,
 };
 
+// バレル長 → 初速補正係数
+// v_actual = baseVelocity * sqrt(barrelMm / 300)
 function barrelCorrectedVelocity(baseVelocity, barrelMm) {
   return baseVelocity * Math.sqrt(barrelMm / 300);
 }
 
+// ============================================================
+//  銃機種プリセット (実在機種を参考にしたスペック)
+//  barrelMm    : インナーバレル長さ
+//  boreMm      : ボア内径 (実測値の代表値)
+//  baseVelocity: 0.20g BB での代表初速 m/s (0.98J 以下)
+// ============================================================
+const GUN_PRESETS = {
+  custom:    { name: 'カスタム',              barrelMm: 300, boreMm: 6.08, baseVelocity: 90 },
+  tm_m4a1:   { name: 'Tokyo Marui M4A1',     barrelMm: 509, boreMm: 6.08, baseVelocity: 88 },
+  tm_akm:    { name: 'Tokyo Marui AKM',      barrelMm: 455, boreMm: 6.08, baseVelocity: 87 },
+  gg_cm16:   { name: 'G&G CM16 Raider',      barrelMm: 363, boreMm: 6.03, baseVelocity: 90 },
+  ca_m15a4:  { name: 'Classic Army M15A4',   barrelMm: 509, boreMm: 6.04, baseVelocity: 91 },
+  tm_mp5a5:  { name: 'Tokyo Marui MP5A5',    barrelMm: 229, boreMm: 6.08, baseVelocity: 85 },
+  kwa_mp7:   { name: 'KWA MP7A1',            barrelMm: 180, boreMm: 6.05, baseVelocity: 78 },
+  well_mb01: { name: 'WELL MB01 スナイパー',  barrelMm: 650, boreMm: 6.01, baseVelocity: 95 },
+};
+
+// ============================================================
+//  ボア径別仕様
+//    velBonus   : ボア速度補正率 (タイトボアは気密↑→初速わずかに向上)
+//    scatter    : 角度散布 σ (度) — BB径ばらつき・バレル直進度誤差
+//    velScatter : 速度散布 σ (率) — 気密一貫性・BB重量誤差
+// ============================================================
+const BORE_SPECS = {
+  6.01: { label: 'タイトボア',  velBonus: 0.025, scatter: 0.04, velScatter: 0.004 },
+  6.03: { label: 'タイト',      velBonus: 0.015, scatter: 0.07, velScatter: 0.007 },
+  6.04: { label: '精密',        velBonus: 0.008, scatter: 0.09, velScatter: 0.009 },
+  6.05: { label: '標準+',       velBonus: 0.003, scatter: 0.11, velScatter: 0.011 },
+  6.08: { label: 'ノーマルボア', velBonus: 0.000, scatter: 0.15, velScatter: 0.015 },
+};
+
+// boreMm に最も近いキーの仕様を返す
+function getBoreSpec(boreMm) {
+  const keys = Object.keys(BORE_SPECS).map(Number);
+  const closest = keys.reduce((a, b) =>
+    Math.abs(a - boreMm) <= Math.abs(b - boreMm) ? a : b
+  );
+  return BORE_SPECS[closest];
+}
+
+// ボア種別の速度ボーナス係数
+function boreVelocityBonus(boreMm) {
+  return getBoreSpec(boreMm).velBonus;
+}
+
+// ============================================================
+//  製造誤差 + BB 個体差による 1 発ごとのスキャター
+//
+//  モデル化した誤差要因:
+//    ・ボア内径公差 (±0.01mm) → BB ガタつき → 角度散布
+//    ・バレル直進度誤差        → 角度散布 (短いほど大)
+//    ・BB 重量ばらつき         → 速度散布
+//    ・Hop-Up ゴム一貫性       → 散布 (ここではボア径で近似)
+//
+//  @param {number} boreMm    - ボア内径 mm
+//  @param {number} barrelMm  - バレル長 mm
+//  @returns {{ dPitch: rad, dYaw: rad, velFactor: number }}
+// ============================================================
+function shotScatter(boreMm, barrelMm) {
+  const spec = getBoreSpec(boreMm);
+
+  // バレルが短いほど散布増加 (基準 300mm)
+  const barrelFactor = Math.sqrt(300 / Math.max(barrelMm, 50));
+  const scatterRad   = spec.scatter * barrelFactor * Math.PI / 180;
+
+  // Box-Muller 法でガウス乱数 2 個生成
+  const u1 = Math.max(1e-10, Math.random());
+  const u2 = Math.random();
+  const r  = Math.sqrt(-2 * Math.log(u1));
+  const n1 = r * Math.cos(2 * Math.PI * u2);
+  const n2 = r * Math.sin(2 * Math.PI * u2);
+
+  return {
+    dPitch:    n1 * scatterRad,                                          // rad
+    dYaw:      n2 * scatterRad,                                          // rad
+    velFactor: 1.0 + (Math.random() - 0.5) * 2 * spec.velScatter,       // 倍率
+  };
+}
+
+// ============================================================
 class BBPhysics {
+  /**
+   * @param {number}   initialSpeed  - 初速 m/s (バレル補正・法的クランプ済)
+   * @param {number}   omega         - 角速度 rad/s (HopUp 強度)
+   * @param {number[]} direction     - 発射方向の単位ベクトル [x,y,z]
+   * @param {number}   mass          - BB質量 kg
+   * @param {number[]} windVelocity  - 風速ベクトル [wx,wy,wz] m/s
+   * @param {number}   spinTiltDeg   - HopUp スピン軸の傾き(度)
+   *                                   0=純粋バックスピン(上方向揚力)
+   *                                  +45=右傾き(左方向カーブ)
+   *                                  -45=左傾き(右方向カーブ)
+   */
   constructor(initialSpeed, omega, direction, mass, windVelocity, spinTiltDeg) {
     this.mass         = mass;
     this.omega        = omega;
     this.wind         = windVelocity || [0, 0, 0];
     this.spinTiltRad  = (spinTiltDeg || 0) * Math.PI / 180;
 
-    this.position = [0, 1.5, 0];
+    // 状態ベクトル (プレーン配列で Three.js に依存しない)
+    this.position = [0, 1.5, 0];  // 目線高さ 1.5m からスタート
     this.velocity = [
       direction[0] * initialSpeed,
       direction[1] * initialSpeed,
@@ -430,10 +642,14 @@ class BBPhysics {
     ];
 
     this.alive             = true;
-    this.distanceTravelled = 0;
-    this.age               = 0;
+    this.distanceTravelled = 0;   // 水平距離 m
+    this.age               = 0;   // 経過秒数
   }
 
+  // ----------------------------------------------------------
+  //  メインの物理ステップ (1/60 s)
+  //  戻り値: true = 生存中 / false = 消滅
+  // ----------------------------------------------------------
   step() {
     if (!this.alive) return false;
 
@@ -462,6 +678,7 @@ class BBPhysics {
       this.position[2] * this.position[2]
     );
 
+    // 終了判定: 地面接触 or 最大射程超過
     if (this.position[1] <= 0 || this.distanceTravelled > C.maxRange) {
       this.position[1] = Math.max(0, this.position[1]);
       this.alive = false;
@@ -471,15 +688,23 @@ class BBPhysics {
     return true;
   }
 
+  // ----------------------------------------------------------
+  //  重力 F = [0, -m*g, 0]
+  // ----------------------------------------------------------
   _gravityForce() {
     return [0, -this.mass * BB_CONST.gravity, 0];
   }
 
+  // ----------------------------------------------------------
+  //  空気抵抗 (風に対する相対速度ベース)
+  //  F = -0.5 * ρ * |v_rel|² * Cd * A * normalize(v_rel)
+  // ----------------------------------------------------------
   _dragForce() {
     const C = BB_CONST;
     const [vx, vy, vz] = this.velocity;
     const [wx, wy, wz] = this.wind;
 
+    // 相対速度 = BB速度 - 風速度
     const rx = vx - wx;
     const ry = vy - wy;
     const rz = vz - wz;
@@ -494,6 +719,19 @@ class BBPhysics {
     ];
   }
 
+  // ----------------------------------------------------------
+  //  マグナス力 (HopUp スピン → 揚力)
+  //
+  //  スピン軸: spinAxis = [cos(α), sin(α), 0]
+  //    α=0   → [1,0,0] = 純粋バックスピン → 上方向揚力
+  //    α>0   → 軸が上方向へ傾く → 揚力が左方向へシフト (右ホップ)
+  //    α<0   → 軸が下方向へ傾く → 揚力が右方向へシフト (左ホップ)
+  //
+  //  揚力方向 = cross(spinAxis, velocity)
+  //  S  = ω * r / |v|
+  //  CL = 2 * S  (簡略モデル)
+  //  FL = 0.5 * ρ * |v|² * CL * A * liftDir
+  // ----------------------------------------------------------
   _magnusForce() {
     const C = BB_CONST;
     if (this.omega === 0) return [0, 0, 0];
@@ -506,9 +744,15 @@ class BBPhysics {
     const CL     = 2 * S;
     const FLMag  = 0.5 * C.airDensity * vMag * vMag * CL * C.crossArea;
 
-    const sx = Math.cos(this.spinTiltRad);
-    const sy = Math.sin(this.spinTiltRad);
+    // スピン軸 (傾き角 α を考慮した汎用計算)
+    const sx = Math.cos(this.spinTiltRad);  // cos(α)
+    const sy = Math.sin(this.spinTiltRad);  // sin(α)
+    // sz = 0 (スピン軸は XY 平面内で回転)
 
+    // cross([sx,sy,0], [vx,vy,vz])
+    //   lx = sy*vz - 0*vy = sy*vz
+    //   ly = 0*vx  - sx*vz = -sx*vz
+    //   lz = sx*vy - sy*vx
     const lx = sy * vz;
     const ly = -sx * vz;
     const lz = sx * vy - sy * vx;
@@ -524,7 +768,76 @@ class BBPhysics {
 }
 
 // ============================================================
-//  scene.js — SceneManager クラス
+//  HandTremor — 手振れ・呼吸・心拍による銃口動揺シミュレーター
+//
+//  モデル化した要因:
+//    呼吸 : 周期 4 秒、ピッチ方向へ最大 ±0.25°
+//    心拍 : 周期 0.9 秒 (約 67 BPM)、±0.05°
+//    手振れ: ローパスフィルタ付きランダムウォーク
+//
+//  射撃姿勢別 振れ幅係数:
+//    伏射 (prone)   : ×0.20
+//    膝射 (kneeling): ×0.50
+//    立射 (standing): ×1.00
+// ============================================================
+class HandTremor {
+  constructor() {
+    this.enabled    = true;
+    this.stance     = 'standing';   // 'prone' | 'kneeling' | 'standing'
+    this._t         = 0;
+    this.pitchRad   = 0;
+    this.yawRad     = 0;
+
+    // LPF ランダムウォーク用バッファ
+    this._noisePitch = 0;
+    this._noiseYaw   = 0;
+
+    // 姿勢別振れ幅係数
+    this._STANCE = { prone: 0.20, kneeling: 0.50, standing: 1.00 };
+  }
+
+  /**
+   * @param {number} dt - 経過時間 (s), 通常 1/60
+   */
+  update(dt) {
+    if (!this.enabled) {
+      // なめらかに静止へ収束
+      this.pitchRad *= 0.82;
+      this.yawRad   *= 0.82;
+      return;
+    }
+
+    this._t += dt;
+    const sf = this._STANCE[this.stance] ?? 1.0;
+
+    // ── 呼吸 (周期 4.0s / 4.2s でわずかにずらして自然に見せる) ──
+    const breathPitch = (0.25 * sf * Math.PI / 180) * Math.sin(this._t * (Math.PI / 2.0));
+    const breathYaw   = (0.10 * sf * Math.PI / 180) * Math.sin(this._t * (Math.PI / 2.1) + 1.1);
+
+    // ── 心拍 (0.9 s 周期 ≈ 67 BPM) ──
+    const heartOmega = 2 * Math.PI / 0.9;
+    const heartPitch = (0.05 * sf * Math.PI / 180) * Math.sin(this._t * heartOmega);
+    const heartYaw   = (0.03 * sf * Math.PI / 180) * Math.cos(this._t * heartOmega + 0.9);
+
+    // ── 手振れ (LPF ランダムウォーク、高周波微動) ──
+    const fineScale = 0.06 * sf * Math.PI / 180;
+    this._noisePitch += ((Math.random() - 0.5) * fineScale - this._noisePitch) * 0.06;
+    this._noiseYaw   += ((Math.random() - 0.5) * fineScale - this._noiseYaw)   * 0.06;
+
+    this.pitchRad = breathPitch + heartPitch + this._noisePitch;
+    this.yawRad   = breathYaw   + heartYaw   + this._noiseYaw;
+  }
+
+  /** 現在の合計揺れ角度を度で返す (HUD 表示用) */
+  get totalDeg() {
+    return Math.sqrt(this.pitchRad * this.pitchRad + this.yawRad * this.yawRad)
+           * 180 / Math.PI;
+  }
+}
+
+// ============================================================
+//  SceneManager — Three.js シーン管理
+//  1人称視点カメラ、地面、5m距離マーカー、風矢印、FOVアニメーション
 // ============================================================
 
 class SceneManager {
@@ -536,19 +849,34 @@ class SceneManager {
     this._normalFOV   = 75;
     this._targetFOV   = 75;
     this._tweening    = false;
+
+    // 手振れシミュレーター
+    this.tremor = new HandTremor();
+
+    // Quaternion キャッシュ (毎フレーム new を避ける)
+    this._baseQuat  = null;   // init() 後に設定
+    this._tempQuat  = null;
+    this._yawAxis   = null;
+    this._pitchAxis = null;
   }
 
+  // ----------------------------------------------------------
+  //  初期化
+  // ----------------------------------------------------------
   init() {
+    // WebGL レンダラー
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
     document.getElementById('canvas-container').appendChild(this.renderer.domElement);
 
+    // シーン (空色背景 + フォグ)
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x87ceeb);
     this.scene.fog = new THREE.Fog(0x87ceeb, 60, 130);
 
+    // カメラ: 1人称視点 (目線高さ 1.5m)
     this.camera = new THREE.PerspectiveCamera(
       this._normalFOV,
       window.innerWidth / window.innerHeight,
@@ -562,9 +890,18 @@ class SceneManager {
     this._buildGround();
     this._buildWindArrow();
 
+    // カメラのベース姿勢を保存 (トレモアのリセット基準)
+    this._baseQuat  = this.camera.quaternion.clone();
+    this._tempQuat  = new THREE.Quaternion();
+    this._yawAxis   = new THREE.Vector3(0, 1, 0);
+    this._pitchAxis = new THREE.Vector3(1, 0, 0);
+
     window.addEventListener('resize', () => this._onResize());
   }
 
+  // ----------------------------------------------------------
+  //  ライティング
+  // ----------------------------------------------------------
   _buildLighting() {
     const ambient = new THREE.AmbientLight(0xffffff, 0.55);
     this.scene.add(ambient);
@@ -581,7 +918,11 @@ class SceneManager {
     this.scene.add(dir);
   }
 
+  // ----------------------------------------------------------
+  //  地面 + グリッド + 5m 距離マーカー
+  // ----------------------------------------------------------
   _buildGround() {
+    // 緑の地面 (200m × 200m)
     const gGround = new THREE.PlaneGeometry(200, 200);
     const mGround = new THREE.MeshLambertMaterial({ color: 0x3d7a46 });
     const ground  = new THREE.Mesh(gGround, mGround);
@@ -589,13 +930,16 @@ class SceneManager {
     ground.receiveShadow = true;
     this.scene.add(ground);
 
+    // グリッド: 5m セル × 20 分割 = 100m 幅、奥行き中央を -50m にオフセット
     const grid = new THREE.GridHelper(100, 20, 0x1a4d22, 0x2d6e35);
     grid.position.set(0, 0.005, -50);
     this.scene.add(grid);
 
+    // 距離マーカー: 5m ごと
     for (let d = 5; d <= 100; d += 5) {
       const isMajor = (d % 10 === 0);
 
+      // 横線 (幅 ±4m)
       const pts = [
         new THREE.Vector3(-4, 0.015, -d),
         new THREE.Vector3(4,  0.015, -d),
@@ -606,13 +950,17 @@ class SceneManager {
       });
       this.scene.add(new THREE.Line(lineGeo, lineMat));
 
+      // テキストスプライト
       const sprite = this._makeLabel(`${d}m`, isMajor);
       sprite.position.set(4.8, 0.8, -d);
-      sprite.scale.set(isMajor ? 2.0 : 1.2, isMajor ? 1.0 : 0.6, 1);
+      const sw = isMajor ? 2.0 : 1.2;
+      const sh = isMajor ? 1.0 : 0.6;
+      sprite.scale.set(sw, sh, 1);
       this.scene.add(sprite);
     }
   }
 
+  // 2D Canvas テキスト → THREE.Sprite
   _makeLabel(text, bold) {
     const canvas = document.createElement('canvas');
     canvas.width  = 128;
@@ -630,14 +978,24 @@ class SceneManager {
     return new THREE.Sprite(mat);
   }
 
+  // ----------------------------------------------------------
+  //  風向き矢印 (ArrowHelper)
+  // ----------------------------------------------------------
   _buildWindArrow() {
     const dir    = new THREE.Vector3(0, 0, -1);
     const origin = new THREE.Vector3(-8, 0.05, -8);
     this._windArrow = new THREE.ArrowHelper(dir, origin, 0.01, 0x00e5ff, 0.4, 0.3);
     this.scene.add(this._windArrow);
+
+    // 風なし = 非表示
     this._windArrow.visible = false;
   }
 
+  /**
+   * 風設定が変わったときに呼ぶ
+   * @param {number} windSpeed   - m/s
+   * @param {number} windDirDeg  - 度 (0=正面から, 90=右から)
+   */
   updateWindArrow(windSpeed, windDirDeg) {
     if (windSpeed < 0.01) {
       this._windArrow.visible = false;
@@ -645,12 +1003,16 @@ class SceneManager {
     }
 
     const rad = windDirDeg * Math.PI / 180;
+    // wind_velocity = [sin, 0, cos] — 風が「この方向から」吹いてくる方向を矢印で表示
     const dir = new THREE.Vector3(Math.sin(rad), 0, Math.cos(rad)).normalize();
     this._windArrow.setDirection(dir);
     this._windArrow.setLength(Math.min(windSpeed * 0.4 + 0.5, 6), 0.4, 0.3);
     this._windArrow.visible = true;
   }
 
+  // ----------------------------------------------------------
+  //  スコープビュー: FOV を 75 ↔ 30 でアニメーション
+  // ----------------------------------------------------------
   enterScopeView() {
     this._targetFOV = 30;
     this._tweening  = true;
@@ -673,13 +1035,33 @@ class SceneManager {
     this.camera.updateProjectionMatrix();
   }
 
+  // ----------------------------------------------------------
+  //  ウィンドウリサイズ
+  // ----------------------------------------------------------
   _onResize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
+  // ----------------------------------------------------------
+  //  毎フレーム呼ぶ
+  // ----------------------------------------------------------
   renderFrame() {
+    const dt = BB_CONST.dt;
+
+    // 手振れ更新
+    this.tremor.update(dt);
+
+    // カメラをベース姿勢に戻し、トレモアオフセットを重ねる
+    this.camera.quaternion.copy(this._baseQuat);
+    if (this.tremor.pitchRad !== 0 || this.tremor.yawRad !== 0) {
+      this._tempQuat.setFromAxisAngle(this._yawAxis,   this.tremor.yawRad);
+      this.camera.quaternion.multiply(this._tempQuat);
+      this._tempQuat.setFromAxisAngle(this._pitchAxis, this.tremor.pitchRad);
+      this.camera.quaternion.multiply(this._tempQuat);
+    }
+
     this._updateFOV();
     this.renderer.render(this.scene, this.camera);
   }
@@ -688,25 +1070,53 @@ class SceneManager {
 const sceneManager = new SceneManager();
 
 // ============================================================
-//  bb.js — BBProjectile クラス
+//  BBProjectile — 物理計算 (BBPhysics) と Three.js を橋渡し
+//  球メッシュ + 3D トレイル + 2D グラフ用ログ を管理
 // ============================================================
 
+// BB の色セット (発射ごとに順番に使う)
 const BB_COLORS = [0x00ff88, 0xff9900, 0xff44aa, 0x44aaff, 0xffff00];
 let _bbColorIndex = 0;
 
 class BBProjectile {
-  constructor(scene, initialSpeed, omega, camera, mass, windVelocity, spinTiltDeg) {
+  /**
+   * @param {THREE.Scene}  scene
+   * @param {number}       initialSpeed  - 初速 m/s (法的クランプ済、ボア補正前)
+   * @param {number}       omega         - HopUp 角速度 rad/s (強度)
+   * @param {THREE.Camera} camera        - 発射方向の取得元 (トレモア込み)
+   * @param {number}       mass          - BB 質量 kg
+   * @param {number[]}     windVelocity  - 風速ベクトル [wx,wy,wz]
+   * @param {number}       spinTiltDeg   - HopUp スピン軸傾き (度, -90〜+90)
+   * @param {number}       boreMm        - ボア内径 mm (製造誤差計算用)
+   * @param {number}       barrelMm      - バレル長 mm (製造誤差計算用)
+   */
+  constructor(scene, initialSpeed, omega, camera, mass, windVelocity, spinTiltDeg, boreMm, barrelMm) {
     this.scene  = scene;
     this.alive  = true;
     this.color  = BB_COLORS[_bbColorIndex % BB_COLORS.length];
     _bbColorIndex++;
 
+    // ── 製造誤差 + BB 個体差によるスキャター (1発ごとに計算) ──
+    const scatter = shotScatter(boreMm || 6.08, barrelMm || 300);
+
+    // カメラ正面方向を発射方向に使う (トレモア適用後の方向)
     const dir3 = new THREE.Vector3();
     camera.getWorldDirection(dir3);
+
+    // ヨー・ピッチ軸でスキャターを適用
+    dir3.applyAxisAngle(new THREE.Vector3(0, 1, 0), scatter.dYaw);
+    dir3.applyAxisAngle(new THREE.Vector3(1, 0, 0), scatter.dPitch);
+    dir3.normalize();
+
     const direction = [dir3.x, dir3.y, dir3.z];
 
-    this.physics = new BBPhysics(initialSpeed, omega, direction, mass, windVelocity, spinTiltDeg);
+    // 速度にも個体差散布を適用
+    const scatteredSpeed = initialSpeed * scatter.velFactor;
 
+    // 物理エンジン
+    this.physics = new BBPhysics(scatteredSpeed, omega, direction, mass, windVelocity, spinTiltDeg);
+
+    // ── 3D 球メッシュ (視覚サイズは少し大きめ r=0.015m) ──
     const geo = new THREE.SphereGeometry(0.015, 8, 6);
     const mat = new THREE.MeshPhongMaterial({
       color:     this.color,
@@ -717,6 +1127,7 @@ class BBProjectile {
     this.mesh.castShadow = true;
     scene.add(this.mesh);
 
+    // ── 3D トレイル (ローリングバッファ) ──
     this._trailMax      = 120;
     this._trailPos      = new Float32Array(this._trailMax * 3);
     this._trailCount    = 0;
@@ -734,19 +1145,28 @@ class BBProjectile {
     this._trailLine = new THREE.Line(this._trailGeo, this._trailMat);
     scene.add(this._trailLine);
 
+    // ── 2D グラフ用 位置ログ ──
+    // 全フレームの [x,y,z] を蓄積 (TrajectoryGraph が参照)
     this.positionLog = [];
     this._finalRange = 0;
   }
 
+  // ----------------------------------------------------------
+  //  1フレーム更新
+  //  戻り値: true=生存 / false=消滅
+  // ----------------------------------------------------------
   update() {
     const stillAlive = this.physics.step();
 
     const [px, py, pz] = this.physics.position;
+
+    // 位置ログを蓄積 (2D グラフ用; 全軌跡)
     this.positionLog.push([px, py, pz]);
 
     if (!stillAlive) {
       this.alive       = false;
       this._finalRange = this.physics.distanceTravelled;
+      // 最終位置をメッシュに反映
       this.mesh.position.set(px, py, pz);
       return false;
     }
@@ -757,6 +1177,9 @@ class BBProjectile {
     return true;
   }
 
+  // ----------------------------------------------------------
+  //  3D トレイルをローリングバッファで更新
+  // ----------------------------------------------------------
   _updateTrail(px, py, pz) {
     const max = this._trailMax;
     const pos = this._trailPos;
@@ -768,6 +1191,7 @@ class BBProjectile {
       pos[i+2]  = pz;
       this._trailCount++;
     } else {
+      // バッファが満杯 → 先頭を捨てて末尾に追記
       pos.copyWithin(0, 3);
       const i   = (max - 1) * 3;
       pos[i]    = px;
@@ -779,6 +1203,9 @@ class BBProjectile {
     this._trailGeo.setDrawRange(0, this._trailCount);
   }
 
+  // ----------------------------------------------------------
+  //  GPU リソースを解放してシーンから除去
+  // ----------------------------------------------------------
   dispose() {
     this.scene.remove(this.mesh);
     this.mesh.geometry.dispose();
@@ -789,21 +1216,25 @@ class BBProjectile {
     this._trailMat.dispose();
   }
 
+  /** 着弾時の水平距離 (m) */
   get range() {
     return this._finalRange;
   }
 }
 
 // ============================================================
-//  ui.js — TrajectoryGraph + UIManager
+//  TrajectoryGraph — 左下の 2D 弾道グラフ
+//  X軸: 水平距離 0〜100m, Y軸: 高さ 0〜3m
 // ============================================================
 
 class TrajectoryGraph {
   constructor() {
     this._canvas  = null;
     this._ctx     = null;
-    this._shots   = [];
+    this._shots   = [];   // 過去 5 発分 { log, color }
     this._maxShots = 5;
+
+    // グラフ描画エリアの余白
     this._pad = { top: 24, right: 10, bottom: 28, left: 42 };
   }
 
@@ -812,11 +1243,13 @@ class TrajectoryGraph {
     this._ctx    = canvasEl.getContext('2d');
   }
 
+  /** 着弾した BB の軌跡ログを追加 */
   addShot(positionLog, color) {
     this._shots.push({ log: positionLog.slice(), color });
     if (this._shots.length > this._maxShots) this._shots.shift();
   }
 
+  /** 毎フレーム: activeBBs の現在軌跡 + 過去軌跡を描画 */
   draw(activeBBs) {
     const c   = this._canvas;
     const ctx = this._ctx;
@@ -824,20 +1257,25 @@ class TrajectoryGraph {
     const H   = c.height;
     const p   = this._pad;
 
-    const gw = W - p.left - p.right;
-    const gh = H - p.top  - p.bottom;
+    const gw = W - p.left - p.right;   // グラフ幅
+    const gh = H - p.top  - p.bottom;  // グラフ高さ
 
     ctx.clearRect(0, 0, W, H);
+
+    // 背景
     ctx.fillStyle = 'rgba(0,0,0,0.78)';
     ctx.fillRect(0, 0, W, H);
 
+    // グリッド + 軸
     this._drawGrid(ctx, gw, gh, p);
 
+    // 過去 5 発 (古い順に薄い)
     this._shots.forEach((shot, i) => {
       const alpha = 0.25 + (i / this._maxShots) * 0.5;
       this._drawPath(ctx, shot.log, shot.color, alpha, gw, gh, p, true);
     });
 
+    // 飛行中の BB (全て白でリアルタイム)
     activeBBs.forEach(bb => {
       if (bb.positionLog.length > 1) {
         this._drawPath(ctx, bb.positionLog, bb.color, 1.0, gw, gh, p, false);
@@ -845,6 +1283,7 @@ class TrajectoryGraph {
     });
   }
 
+  // ── X (水平距離 0〜100m)、Y (高さ 0〜3m) を画素に変換 ──
   _toX(dist, gw) { return this._pad.left + (dist / 100) * gw; }
   _toY(height, gh) { return this._pad.top + gh - (height / 3) * gh; }
 
@@ -854,30 +1293,35 @@ class TrajectoryGraph {
     const px1 = p.left + gw;
     const py1 = p.top  + gh;
 
+    // グリッド線 (5m)
     ctx.strokeStyle = 'rgba(255,255,255,0.1)';
     ctx.lineWidth   = 0.5;
     for (let d = 0; d <= 100; d += 5) {
       const x = this._toX(d, gw);
       ctx.beginPath(); ctx.moveTo(x, py0); ctx.lineTo(x, py1); ctx.stroke();
     }
+    // Y 方向グリッド (0.5m)
     for (let h = 0; h <= 3; h += 0.5) {
       const y = this._toY(h, gh);
       ctx.beginPath(); ctx.moveTo(px0, y); ctx.lineTo(px1, y); ctx.stroke();
     }
 
+    // 軸線
     ctx.strokeStyle = 'rgba(255,255,255,0.5)';
     ctx.lineWidth   = 1;
     ctx.beginPath();
-    ctx.moveTo(px0, py0); ctx.lineTo(px0, py1);
-    ctx.moveTo(px0, py1); ctx.lineTo(px1, py1);
+    ctx.moveTo(px0, py0); ctx.lineTo(px0, py1); // Y軸
+    ctx.moveTo(px0, py1); ctx.lineTo(px1, py1); // X軸
     ctx.stroke();
 
+    // 目線高さ (1.5m) 参考線
     const eyeY = this._toY(1.5, gh);
     ctx.strokeStyle = 'rgba(255,255,100,0.25)';
     ctx.setLineDash([4, 4]);
     ctx.beginPath(); ctx.moveTo(px0, eyeY); ctx.lineTo(px1, eyeY); ctx.stroke();
     ctx.setLineDash([]);
 
+    // X 軸ラベル (10m 毎)
     ctx.fillStyle  = '#888';
     ctx.font       = '9px monospace';
     ctx.textAlign  = 'center';
@@ -885,11 +1329,13 @@ class TrajectoryGraph {
       ctx.fillText(`${d}m`, this._toX(d, gw), py1 + 12);
     }
 
+    // Y 軸ラベル (0, 1, 2, 3m)
     ctx.textAlign = 'right';
     for (let h = 0; h <= 3; h++) {
       ctx.fillText(`${h}m`, px0 - 4, this._toY(h, gh) + 3);
     }
 
+    // タイトル
     ctx.fillStyle = '#aaffaa';
     ctx.font      = '10px monospace';
     ctx.textAlign = 'center';
@@ -899,6 +1345,7 @@ class TrajectoryGraph {
   _drawPath(ctx, log, color, alpha, gw, gh, p, markImpact) {
     if (log.length < 2) return;
 
+    // 16進カラー → rgba
     const r = (color >> 16) & 0xff;
     const g = (color >>  8) & 0xff;
     const b =  color        & 0xff;
@@ -908,6 +1355,7 @@ class TrajectoryGraph {
     ctx.beginPath();
 
     log.forEach(([px, py, pz], i) => {
+      // 水平距離 = sqrt(px²+pz²)
       const dist = Math.sqrt(px * px + pz * pz);
       const cx   = this._toX(dist, gw);
       const cy   = this._toY(py,   gh);
@@ -916,6 +1364,7 @@ class TrajectoryGraph {
     });
     ctx.stroke();
 
+    // 着弾点に × マーク
     if (markImpact) {
       const [lx, ly, lz] = log[log.length - 1];
       const dist = Math.sqrt(lx * lx + lz * lz);
@@ -932,39 +1381,56 @@ class TrajectoryGraph {
   }
 }
 
+// ============================================================
+//  UIManager — Property パネル、スコープ、HUD 管理
+// ============================================================
+
 class UIManager {
   constructor() {
-    this.mass          = BB_WEIGHTS['0.20'];
-    this.hopupPct      = 0;
-    this.omega         = 0;
-    this.spinTiltDeg   = 0;
-    this.baseVelocity  = 90;
-    this.barrelMm      = 300;
-    this.windSpeed     = 0;
-    this.windDirDeg    = 0;
-    this.muzzleVelocity = 90;
+    // ── 設定値 ──
+    this.mass          = BB_WEIGHTS['0.20'];  // kg デフォルト 0.20g
+    this.hopupPct      = 0;                   // 0–100 %
+    this.omega         = 0;                   // rad/s
+    this.spinTiltDeg   = 0;                   // HopUp スピン軸傾き度 (-90〜+90)
+    this.baseVelocity  = 90;                  // m/s (ユーザー入力)
+    this.barrelMm      = 300;                 // mm
+    this.boreMm        = 6.08;               // mm (ボア内径)
+    this.windSpeed     = 0;                   // m/s
+    this.windDirDeg    = 0;                   // 度
+    this.muzzleVelocity = 90;                 // m/s (実際に使う初速)
 
+    // ── スコープ ──
     this._scopeActive  = false;
     this._scopeCanvas  = null;
     this._scopeCtx     = null;
 
+    // ── 2D 弾道グラフ ──
     this.trajectoryGraph = new TrajectoryGraph();
 
+    // ── FPS 計測 ──
     this._fpsBuf  = [];
     this._lastT   = performance.now();
+
+    // ── 最後の射程 ──
     this._lastRange = null;
   }
 
+  // ----------------------------------------------------------
+  //  初期化: DOM イベントを全て登録
+  // ----------------------------------------------------------
   init(sceneManager) {
     this._sceneManager = sceneManager;
 
+    // 2D グラフ Canvas
     this.trajectoryGraph.init(document.getElementById('trajectory-canvas'));
 
+    // スコープ Canvas
     this._scopeCanvas = document.getElementById('scope-canvas');
     this._scopeCtx    = this._scopeCanvas.getContext('2d');
     this._resizeScopeCanvas();
     window.addEventListener('resize', () => this._resizeScopeCanvas());
 
+    // ── BB 重さ (ラジオボタン) ──
     document.querySelectorAll('input[name="bb-weight"]').forEach(radio => {
       radio.addEventListener('change', () => {
         this.mass = BB_WEIGHTS[radio.value];
@@ -972,6 +1438,7 @@ class UIManager {
       });
     });
 
+    // ── HopUp 強度 スライダー ──
     const hopSlider = document.getElementById('hopup-slider');
     const hopVal    = document.getElementById('hopup-val');
     hopSlider.addEventListener('input', () => {
@@ -980,6 +1447,7 @@ class UIManager {
       hopVal.textContent = `${this.hopupPct}%`;
     });
 
+    // ── HopUp 方向 (スピン軸傾き) スライダー ──
     const hopDirSlider = document.getElementById('hopup-dir-slider');
     const hopDirVal    = document.getElementById('hopup-dir-val');
     const hopDirIcon   = document.getElementById('hopup-dir-icon');
@@ -995,6 +1463,7 @@ class UIManager {
       });
     }
 
+    // ── 基本初速 スライダー ──
     const velSlider = document.getElementById('vel-slider');
     const velVal    = document.getElementById('vel-val');
     velSlider.addEventListener('input', () => {
@@ -1003,6 +1472,7 @@ class UIManager {
       this._updateMuzzleVelocity();
     });
 
+    // ── バレル長 スライダー ──
     const barrelSlider = document.getElementById('barrel-slider');
     const barrelVal    = document.getElementById('barrel-val');
     barrelSlider.addEventListener('input', () => {
@@ -1011,6 +1481,7 @@ class UIManager {
       this._updateMuzzleVelocity();
     });
 
+    // ── 風速 スライダー ──
     const windSpdSlider = document.getElementById('wind-speed-slider');
     const windSpdVal    = document.getElementById('wind-speed-val');
     windSpdSlider.addEventListener('input', () => {
@@ -1019,6 +1490,7 @@ class UIManager {
       sceneManager.updateWindArrow(this.windSpeed, this.windDirDeg);
     });
 
+    // ── 風向き スライダー ──
     const windDirSlider = document.getElementById('wind-dir-slider');
     const windDirVal    = document.getElementById('wind-dir-val');
     windDirSlider.addEventListener('input', () => {
@@ -1028,20 +1500,99 @@ class UIManager {
       sceneManager.updateWindArrow(this.windSpeed, this.windDirDeg);
     });
 
+    // ── 銃機種プリセット ──
+    const gunPreset = document.getElementById('gun-preset');
+    if (gunPreset) {
+      gunPreset.addEventListener('change', () => {
+        const key    = gunPreset.value;
+        const preset = GUN_PRESETS[key];
+        if (!preset) return;
+
+        // プリセット値を各スライダーへ反映
+        const barrelSl = document.getElementById('barrel-slider');
+        const barrelVl = document.getElementById('barrel-val');
+        const velSl    = document.getElementById('vel-slider');
+        const velVl    = document.getElementById('vel-val');
+        const boreSel  = document.getElementById('bore-select');
+
+        this.barrelMm     = preset.barrelMm;
+        this.baseVelocity = preset.baseVelocity;
+        this.boreMm       = preset.boreMm;
+
+        if (barrelSl) { barrelSl.value = preset.barrelMm; }
+        if (barrelVl) { barrelVl.textContent = `${preset.barrelMm} mm`; }
+        if (velSl)    { velSl.value = preset.baseVelocity; }
+        if (velVl)    { velVl.textContent = `${preset.baseVelocity.toFixed(1)} m/s`; }
+        if (boreSel)  { boreSel.value = preset.boreMm.toFixed(2); }
+
+        this._updateMuzzleVelocity();
+        this._updateBoreInfo();
+      });
+    }
+
+    // ── ボア径セレクター ──
+    const boreSel = document.getElementById('bore-select');
+    if (boreSel) {
+      boreSel.addEventListener('change', () => {
+        this.boreMm = parseFloat(boreSel.value);
+        // カスタムに切り替え
+        const gp = document.getElementById('gun-preset');
+        if (gp) gp.value = 'custom';
+        this._updateMuzzleVelocity();
+        this._updateBoreInfo();
+      });
+    }
+
+    // ── 射撃姿勢 ──
+    document.querySelectorAll('input[name="stance"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        if (radio.checked) sceneManager.tremor.stance = radio.value;
+      });
+    });
+
+    // ── 手振れトグル ──
+    const tremorToggle = document.getElementById('tremor-toggle');
+    if (tremorToggle) {
+      tremorToggle.addEventListener('change', () => {
+        sceneManager.tremor.enabled = tremorToggle.checked;
+      });
+    }
+
+    // 初期表示を更新
     this._updateMuzzleVelocity();
+    this._updateBoreInfo();
   }
 
+  // ----------------------------------------------------------
+  //  ボア情報テキストを更新
+  // ----------------------------------------------------------
+  _updateBoreInfo() {
+    const spec = getBoreSpec(this.boreMm);
+    const el   = document.getElementById('bore-info');
+    if (el) {
+      el.textContent = `散布σ: ±${spec.scatter.toFixed(2)}° / 速度誤差: ±${(spec.velScatter * 100).toFixed(1)}%`;
+    }
+  }
+
+  // ----------------------------------------------------------
+  //  初速計算 (バレル補正 → ボア速度補正 → 法的クランプ)
+  // ----------------------------------------------------------
   _updateMuzzleVelocity() {
-    const raw     = barrelCorrectedVelocity(this.baseVelocity, this.barrelMm);
-    const vMax    = legalMaxVelocity(this.mass);
-    const clamped = Math.min(raw, vMax);
-    const over    = raw > vMax + 0.01;
+    const raw      = barrelCorrectedVelocity(this.baseVelocity, this.barrelMm);
+    const bonus    = boreVelocityBonus(this.boreMm);   // タイトボア補正
+    const adjusted = raw * (1 + bonus);
+    const vMax     = legalMaxVelocity(this.mass);
+    const clamped  = Math.min(adjusted, vMax);
+    const over     = adjusted > vMax + 0.01;
+    // (以降 raw → adjusted, clamped へ置き換え済み)
 
     this.muzzleVelocity = clamped;
 
+    // ── 法定上限速度の表示更新 ──
     const legalEl = document.getElementById('legal-max');
     if (legalEl) legalEl.textContent = `法定上限: ${vMax.toFixed(1)} m/s`;
 
+    // ── スライダー上限をBB重量に合わせる ──
     const velSlider = document.getElementById('vel-slider');
     if (velSlider) {
       velSlider.max = vMax.toFixed(1);
@@ -1052,6 +1603,7 @@ class UIManager {
       }
     }
 
+    // ── 初速・エネルギー表示 ──
     const mvEl  = document.getElementById('muzzle-velocity');
     const enEl  = document.getElementById('muzzle-energy');
     const warnEl = document.getElementById('legal-warning');
@@ -1064,6 +1616,9 @@ class UIManager {
     }
   }
 
+  // ----------------------------------------------------------
+  //  風向きアイコン (矢印文字で表示)
+  // ----------------------------------------------------------
   _updateWindDirIcon(deg) {
     const arrows = ['↑','↗','→','↘','↓','↙','←','↖'];
     const idx    = Math.round((deg % 360) / 45) % 8;
@@ -1071,6 +1626,9 @@ class UIManager {
     if (el) el.textContent = arrows[idx];
   }
 
+  // ----------------------------------------------------------
+  //  スコープ ON/OFF トグル
+  // ----------------------------------------------------------
   toggleScope() {
     this._scopeActive = !this._scopeActive;
     const overlay = document.getElementById('scope-overlay');
@@ -1087,6 +1645,10 @@ class UIManager {
 
   get scopeActive() { return this._scopeActive; }
 
+  // ----------------------------------------------------------
+  //  スコープオーバーレイ描画 (2D Canvas)
+  //  円形マスク + グラデーション + クロスヘア + 赤い丸
+  // ----------------------------------------------------------
   _drawScopeOverlay() {
     const ctx = this._scopeCtx;
     const W   = this._scopeCanvas.width;
@@ -1097,15 +1659,19 @@ class UIManager {
 
     ctx.clearRect(0, 0, W, H);
 
+    // ① 全体を暗くする
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.92)';
     ctx.fillRect(0, 0, W, H);
+
+    // ② スコープ円をくり抜く (destination-out)
     ctx.globalCompositeOperation = 'destination-out';
     ctx.beginPath();
     ctx.arc(cx, cy, R, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
+    // ③ 内部ビネット (ラジアルグラデーション)
     ctx.save();
     const grad = ctx.createRadialGradient(cx, cy, R * 0.55, cx, cy, R);
     grad.addColorStop(0,   'rgba(0,0,0,0)');
@@ -1117,17 +1683,21 @@ class UIManager {
     ctx.fill();
     ctx.restore();
 
+    // ④ クロスヘア (細い暗緑線、中心付近に隙間)
     const gap = 20;
     ctx.save();
     ctx.strokeStyle = 'rgba(20,100,20,0.75)';
     ctx.lineWidth   = 1;
     ctx.beginPath();
+    // 水平
     ctx.moveTo(cx - R, cy);  ctx.lineTo(cx - gap, cy);
     ctx.moveTo(cx + gap, cy); ctx.lineTo(cx + R, cy);
+    // 垂直
     ctx.moveTo(cx, cy - R);  ctx.lineTo(cx, cy - gap);
     ctx.moveTo(cx, cy + gap); ctx.lineTo(cx, cy + R);
     ctx.stroke();
 
+    // ミル目盛り (5 段階)
     ctx.strokeStyle = 'rgba(30,120,30,0.5)';
     for (let i = 1; i <= 5; i++) {
       const off = (R / 5) * i;
@@ -1141,6 +1711,7 @@ class UIManager {
     }
     ctx.restore();
 
+    // ⑤ 赤い丸 (中心)
     ctx.save();
     ctx.fillStyle   = 'rgba(255,0,0,0.92)';
     ctx.shadowColor = 'rgba(255,0,0,0.6)';
@@ -1150,6 +1721,7 @@ class UIManager {
     ctx.fill();
     ctx.restore();
 
+    // ⑥ スコープ枠
     ctx.save();
     ctx.strokeStyle = '#000';
     ctx.lineWidth   = 4;
@@ -1165,7 +1737,11 @@ class UIManager {
     if (this._scopeActive) this._drawScopeOverlay();
   }
 
+  // ----------------------------------------------------------
+  //  毎フレーム HUD 更新
+  // ----------------------------------------------------------
   updateHUD(lastShotRange) {
+    // FPS 計測
     const now = performance.now();
     const dt  = now - this._lastT;
     this._lastT = now;
@@ -1188,8 +1764,24 @@ class UIManager {
 
     const hopEl = document.getElementById('hud-hopup');
     if (hopEl) hopEl.textContent = `HopUp: ${this.hopupPct}%`;
+
+    // 手振れ・姿勢 HUD
+    const tremorEl  = document.getElementById('hud-tremor');
+    const stanceMap = { prone: '伏射', kneeling: '膝射', standing: '立射' };
+    if (tremorEl) {
+      const t       = sceneManager.tremor;
+      const stLabel = stanceMap[t.stance] || t.stance;
+      if (t.enabled) {
+        tremorEl.textContent = `[${stLabel}] ±${t.totalDeg.toFixed(2)}°`;
+      } else {
+        tremorEl.textContent = `[${stLabel}] 手振れ OFF`;
+      }
+    }
   }
 
+  // ----------------------------------------------------------
+  //  現在の風速ベクトル [wx, wy, wz] を返す
+  // ----------------------------------------------------------
   getWindVelocity() {
     const rad = this.windDirDeg * Math.PI / 180;
     return [
@@ -1203,23 +1795,32 @@ class UIManager {
 const uiManager = new UIManager();
 
 // ============================================================
-//  app.js — App メインループ
+//  App — メインアプリケーション
+//  ・requestAnimationFrame ループ
+//  ・左クリック → 発射、右クリック → スコープ切替
+//  ・BB 生存管理、2D グラフ更新
 // ============================================================
 
 class App {
   constructor() {
-    this.activeBBs     = [];
-    this._lastRange    = null;
+    this.activeBBs     = [];   // BBProjectile[]
+    this._lastRange    = null; // 直近の着弾距離
     this._animFrameId  = null;
   }
 
+  // ----------------------------------------------------------
+  //  起動
+  // ----------------------------------------------------------
   init() {
     sceneManager.init();
     uiManager.init(sceneManager);
 
+    // 右クリックのブラウザメニューを抑制
     document.addEventListener('contextmenu', e => e.preventDefault());
 
+    // マウスイベント
     document.addEventListener('mousedown', e => {
+      // コントロールパネル上のクリックは無視
       if (e.target.closest('#property-panel') ||
           e.target.closest('#hud')) return;
 
@@ -1227,9 +1828,13 @@ class App {
       if (e.button === 2) uiManager.toggleScope();
     });
 
+    // アニメーションループ開始
     this._animate();
   }
 
+  // ----------------------------------------------------------
+  //  BB 弾を発射
+  // ----------------------------------------------------------
   _shootBB() {
     const bb = new BBProjectile(
       sceneManager.scene,
@@ -1238,40 +1843,54 @@ class App {
       sceneManager.camera,
       uiManager.mass,
       uiManager.getWindVelocity(),
-      uiManager.spinTiltDeg
+      uiManager.spinTiltDeg,
+      uiManager.boreMm,          // ボア内径 (製造誤差スキャター用)
+      uiManager.barrelMm         // バレル長 (製造誤差スキャター用)
     );
     this.activeBBs.push(bb);
   }
 
+  // ----------------------------------------------------------
+  //  メインループ
+  // ----------------------------------------------------------
   _animate() {
     this._animFrameId = requestAnimationFrame(() => this._animate());
 
     const toRemove = [];
 
+    // 全 BB を 1 ティック進める
     for (const bb of this.activeBBs) {
       const alive = bb.update();
       if (!alive) {
         toRemove.push(bb);
         this._lastRange = bb.range;
+        // 着弾軌跡を 2D グラフへ渡す
         uiManager.trajectoryGraph.addShot(bb.positionLog, bb.color);
       }
     }
 
+    // 死んだ BB を除去
     for (const bb of toRemove) {
       bb.dispose();
       this.activeBBs.splice(this.activeBBs.indexOf(bb), 1);
     }
 
+    // 2D 弾道グラフ更新 (毎フレーム)
     uiManager.trajectoryGraph.draw(this.activeBBs);
+
+    // 3D シーン描画
     sceneManager.renderFrame();
+
+    // HUD 更新
     uiManager.updateHUD(this._lastRange);
+    // 表示後は null に戻す (毎フレーム射程を更新し続けない)
     this._lastRange = null;
   }
 }
 
+// ── エントリーポイント ──
 const app = new App();
 window.addEventListener('DOMContentLoaded', () => app.init());
   </script>
-
 </body>
 </html>

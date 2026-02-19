@@ -172,6 +172,7 @@ class UIManager {
     this.spinTiltDeg   = 0;                   // HopUp スピン軸傾き度 (-90〜+90)
     this.baseVelocity  = 90;                  // m/s (ユーザー入力)
     this.barrelMm      = 300;                 // mm
+    this.boreMm        = 6.08;               // mm (ボア内径)
     this.windSpeed     = 0;                   // m/s
     this.windDirDeg    = 0;                   // 度
     this.muzzleVelocity = 90;                 // m/s (実際に使う初速)
@@ -277,18 +278,91 @@ class UIManager {
       sceneManager.updateWindArrow(this.windSpeed, this.windDirDeg);
     });
 
+    // ── 銃機種プリセット ──
+    const gunPreset = document.getElementById('gun-preset');
+    if (gunPreset) {
+      gunPreset.addEventListener('change', () => {
+        const key    = gunPreset.value;
+        const preset = GUN_PRESETS[key];
+        if (!preset) return;
+
+        // プリセット値を各スライダーへ反映
+        const barrelSl = document.getElementById('barrel-slider');
+        const barrelVl = document.getElementById('barrel-val');
+        const velSl    = document.getElementById('vel-slider');
+        const velVl    = document.getElementById('vel-val');
+        const boreSel  = document.getElementById('bore-select');
+
+        this.barrelMm     = preset.barrelMm;
+        this.baseVelocity = preset.baseVelocity;
+        this.boreMm       = preset.boreMm;
+
+        if (barrelSl) { barrelSl.value = preset.barrelMm; }
+        if (barrelVl) { barrelVl.textContent = `${preset.barrelMm} mm`; }
+        if (velSl)    { velSl.value = preset.baseVelocity; }
+        if (velVl)    { velVl.textContent = `${preset.baseVelocity.toFixed(1)} m/s`; }
+        if (boreSel)  { boreSel.value = preset.boreMm.toFixed(2); }
+
+        this._updateMuzzleVelocity();
+        this._updateBoreInfo();
+      });
+    }
+
+    // ── ボア径セレクター ──
+    const boreSel = document.getElementById('bore-select');
+    if (boreSel) {
+      boreSel.addEventListener('change', () => {
+        this.boreMm = parseFloat(boreSel.value);
+        // カスタムに切り替え
+        const gp = document.getElementById('gun-preset');
+        if (gp) gp.value = 'custom';
+        this._updateMuzzleVelocity();
+        this._updateBoreInfo();
+      });
+    }
+
+    // ── 射撃姿勢 ──
+    document.querySelectorAll('input[name="stance"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        if (radio.checked) sceneManager.tremor.stance = radio.value;
+      });
+    });
+
+    // ── 手振れトグル ──
+    const tremorToggle = document.getElementById('tremor-toggle');
+    if (tremorToggle) {
+      tremorToggle.addEventListener('change', () => {
+        sceneManager.tremor.enabled = tremorToggle.checked;
+      });
+    }
+
     // 初期表示を更新
     this._updateMuzzleVelocity();
+    this._updateBoreInfo();
   }
 
   // ----------------------------------------------------------
-  //  初速計算 (バレル補正 → 法的クランプ)
+  //  ボア情報テキストを更新
+  // ----------------------------------------------------------
+  _updateBoreInfo() {
+    const spec = getBoreSpec(this.boreMm);
+    const el   = document.getElementById('bore-info');
+    if (el) {
+      el.textContent = `散布σ: ±${spec.scatter.toFixed(2)}° / 速度誤差: ±${(spec.velScatter * 100).toFixed(1)}%`;
+    }
+  }
+
+  // ----------------------------------------------------------
+  //  初速計算 (バレル補正 → ボア速度補正 → 法的クランプ)
   // ----------------------------------------------------------
   _updateMuzzleVelocity() {
-    const raw     = barrelCorrectedVelocity(this.baseVelocity, this.barrelMm);
-    const vMax    = legalMaxVelocity(this.mass);
-    const clamped = Math.min(raw, vMax);
-    const over    = raw > vMax + 0.01;
+    const raw      = barrelCorrectedVelocity(this.baseVelocity, this.barrelMm);
+    const bonus    = boreVelocityBonus(this.boreMm);   // タイトボア補正
+    const adjusted = raw * (1 + bonus);
+    const vMax     = legalMaxVelocity(this.mass);
+    const clamped  = Math.min(adjusted, vMax);
+    const over     = adjusted > vMax + 0.01;
+    // (以降 raw → adjusted, clamped へ置き換え済み)
 
     this.muzzleVelocity = clamped;
 
@@ -468,6 +542,19 @@ class UIManager {
 
     const hopEl = document.getElementById('hud-hopup');
     if (hopEl) hopEl.textContent = `HopUp: ${this.hopupPct}%`;
+
+    // 手振れ・姿勢 HUD
+    const tremorEl  = document.getElementById('hud-tremor');
+    const stanceMap = { prone: '伏射', kneeling: '膝射', standing: '立射' };
+    if (tremorEl) {
+      const t       = sceneManager.tremor;
+      const stLabel = stanceMap[t.stance] || t.stance;
+      if (t.enabled) {
+        tremorEl.textContent = `[${stLabel}] ±${t.totalDeg.toFixed(2)}°`;
+      } else {
+        tremorEl.textContent = `[${stLabel}] 手振れ OFF`;
+      }
+    }
   }
 
   // ----------------------------------------------------------

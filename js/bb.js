@@ -12,26 +12,40 @@ let _bbColorIndex = 0;
 class BBProjectile {
   /**
    * @param {THREE.Scene}  scene
-   * @param {number}       initialSpeed  - 初速 m/s (法的クランプ済)
+   * @param {number}       initialSpeed  - 初速 m/s (法的クランプ済、ボア補正前)
    * @param {number}       omega         - HopUp 角速度 rad/s (強度)
-   * @param {THREE.Camera} camera        - 発射方向の取得元
+   * @param {THREE.Camera} camera        - 発射方向の取得元 (トレモア込み)
    * @param {number}       mass          - BB 質量 kg
    * @param {number[]}     windVelocity  - 風速ベクトル [wx,wy,wz]
    * @param {number}       spinTiltDeg   - HopUp スピン軸傾き (度, -90〜+90)
+   * @param {number}       boreMm        - ボア内径 mm (製造誤差計算用)
+   * @param {number}       barrelMm      - バレル長 mm (製造誤差計算用)
    */
-  constructor(scene, initialSpeed, omega, camera, mass, windVelocity, spinTiltDeg) {
+  constructor(scene, initialSpeed, omega, camera, mass, windVelocity, spinTiltDeg, boreMm, barrelMm) {
     this.scene  = scene;
     this.alive  = true;
     this.color  = BB_COLORS[_bbColorIndex % BB_COLORS.length];
     _bbColorIndex++;
 
-    // カメラ正面方向を発射方向に使う
+    // ── 製造誤差 + BB 個体差によるスキャター (1発ごとに計算) ──
+    const scatter = shotScatter(boreMm || 6.08, barrelMm || 300);
+
+    // カメラ正面方向を発射方向に使う (トレモア適用後の方向)
     const dir3 = new THREE.Vector3();
     camera.getWorldDirection(dir3);
+
+    // ヨー・ピッチ軸でスキャターを適用
+    dir3.applyAxisAngle(new THREE.Vector3(0, 1, 0), scatter.dYaw);
+    dir3.applyAxisAngle(new THREE.Vector3(1, 0, 0), scatter.dPitch);
+    dir3.normalize();
+
     const direction = [dir3.x, dir3.y, dir3.z];
 
+    // 速度にも個体差散布を適用
+    const scatteredSpeed = initialSpeed * scatter.velFactor;
+
     // 物理エンジン
-    this.physics = new BBPhysics(initialSpeed, omega, direction, mass, windVelocity, spinTiltDeg);
+    this.physics = new BBPhysics(scatteredSpeed, omega, direction, mass, windVelocity, spinTiltDeg);
 
     // ── 3D 球メッシュ (視覚サイズは少し大きめ r=0.015m) ──
     const geo = new THREE.SphereGeometry(0.015, 8, 6);

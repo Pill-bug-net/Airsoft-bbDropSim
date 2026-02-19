@@ -1,6 +1,74 @@
 'use strict';
 
 // ============================================================
+//  HandTremor — 手振れ・呼吸・心拍による銃口動揺シミュレーター
+//
+//  モデル化した要因:
+//    呼吸 : 周期 4 秒、ピッチ方向へ最大 ±0.25°
+//    心拍 : 周期 0.9 秒 (約 67 BPM)、±0.05°
+//    手振れ: ローパスフィルタ付きランダムウォーク
+//
+//  射撃姿勢別 振れ幅係数:
+//    伏射 (prone)   : ×0.20
+//    膝射 (kneeling): ×0.50
+//    立射 (standing): ×1.00
+// ============================================================
+class HandTremor {
+  constructor() {
+    this.enabled    = true;
+    this.stance     = 'standing';   // 'prone' | 'kneeling' | 'standing'
+    this._t         = 0;
+    this.pitchRad   = 0;
+    this.yawRad     = 0;
+
+    // LPF ランダムウォーク用バッファ
+    this._noisePitch = 0;
+    this._noiseYaw   = 0;
+
+    // 姿勢別振れ幅係数
+    this._STANCE = { prone: 0.20, kneeling: 0.50, standing: 1.00 };
+  }
+
+  /**
+   * @param {number} dt - 経過時間 (s), 通常 1/60
+   */
+  update(dt) {
+    if (!this.enabled) {
+      // なめらかに静止へ収束
+      this.pitchRad *= 0.82;
+      this.yawRad   *= 0.82;
+      return;
+    }
+
+    this._t += dt;
+    const sf = this._STANCE[this.stance] ?? 1.0;
+
+    // ── 呼吸 (周期 4.0s / 4.2s でわずかにずらして自然に見せる) ──
+    const breathPitch = (0.25 * sf * Math.PI / 180) * Math.sin(this._t * (Math.PI / 2.0));
+    const breathYaw   = (0.10 * sf * Math.PI / 180) * Math.sin(this._t * (Math.PI / 2.1) + 1.1);
+
+    // ── 心拍 (0.9 s 周期 ≈ 67 BPM) ──
+    const heartOmega = 2 * Math.PI / 0.9;
+    const heartPitch = (0.05 * sf * Math.PI / 180) * Math.sin(this._t * heartOmega);
+    const heartYaw   = (0.03 * sf * Math.PI / 180) * Math.cos(this._t * heartOmega + 0.9);
+
+    // ── 手振れ (LPF ランダムウォーク、高周波微動) ──
+    const fineScale = 0.06 * sf * Math.PI / 180;
+    this._noisePitch += ((Math.random() - 0.5) * fineScale - this._noisePitch) * 0.06;
+    this._noiseYaw   += ((Math.random() - 0.5) * fineScale - this._noiseYaw)   * 0.06;
+
+    this.pitchRad = breathPitch + heartPitch + this._noisePitch;
+    this.yawRad   = breathYaw   + heartYaw   + this._noiseYaw;
+  }
+
+  /** 現在の合計揺れ角度を度で返す (HUD 表示用) */
+  get totalDeg() {
+    return Math.sqrt(this.pitchRad * this.pitchRad + this.yawRad * this.yawRad)
+           * 180 / Math.PI;
+  }
+}
+
+// ============================================================
 //  SceneManager — Three.js シーン管理
 //  1人称視点カメラ、地面、5m距離マーカー、風矢印、FOVアニメーション
 // ============================================================
@@ -14,6 +82,15 @@ class SceneManager {
     this._normalFOV   = 75;
     this._targetFOV   = 75;
     this._tweening    = false;
+
+    // 手振れシミュレーター
+    this.tremor = new HandTremor();
+
+    // Quaternion キャッシュ (毎フレーム new を避ける)
+    this._baseQuat  = null;   // init() 後に設定
+    this._tempQuat  = null;
+    this._yawAxis   = null;
+    this._pitchAxis = null;
   }
 
   // ----------------------------------------------------------
@@ -45,6 +122,12 @@ class SceneManager {
     this._buildLighting();
     this._buildGround();
     this._buildWindArrow();
+
+    // カメラのベース姿勢を保存 (トレモアのリセット基準)
+    this._baseQuat  = this.camera.quaternion.clone();
+    this._tempQuat  = new THREE.Quaternion();
+    this._yawAxis   = new THREE.Vector3(0, 1, 0);
+    this._pitchAxis = new THREE.Vector3(1, 0, 0);
 
     window.addEventListener('resize', () => this._onResize());
   }
@@ -198,6 +281,20 @@ class SceneManager {
   //  毎フレーム呼ぶ
   // ----------------------------------------------------------
   renderFrame() {
+    const dt = BB_CONST.dt;
+
+    // 手振れ更新
+    this.tremor.update(dt);
+
+    // カメラをベース姿勢に戻し、トレモアオフセットを重ねる
+    this.camera.quaternion.copy(this._baseQuat);
+    if (this.tremor.pitchRad !== 0 || this.tremor.yawRad !== 0) {
+      this._tempQuat.setFromAxisAngle(this._yawAxis,   this.tremor.yawRad);
+      this.camera.quaternion.multiply(this._tempQuat);
+      this._tempQuat.setFromAxisAngle(this._pitchAxis, this.tremor.pitchRad);
+      this.camera.quaternion.multiply(this._tempQuat);
+    }
+
     this._updateFOV();
     this.renderer.render(this.scene, this.camera);
   }
