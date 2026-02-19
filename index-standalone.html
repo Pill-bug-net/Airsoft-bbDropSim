@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Airsoft BB Drop Sim</title>
+  <style>
+/* ============================================================
+   Airsoft BB Drop Sim — スタイルシート (インライン)
+   ============================================================ */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --green:       #00ff88;
+  --green-dim:   #00bb66;
+  --green-dark:  #003322;
+  --panel-bg:    rgba(0, 10, 4, 0.88);
+  --panel-border: rgba(0, 255, 136, 0.35);
+  --text:        #ccffdd;
+  --text-dim:    #779988;
+  --warn:        #ff4444;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  user-select: none;
+}
+
+#canvas-container {
+  position: fixed;
+  inset: 0;
+}
+
+#canvas-container canvas {
+  display: block;
+  width:  100% !important;
+  height: 100% !important;
+}
+
+#scope-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+#scope-overlay.hidden {
+  display: none;
+}
+
+#scope-canvas {
+  width:  100%;
+  height: 100%;
+}
+
+#hud {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+
+#hud span {
+  display: inline-block;
+  background: rgba(0,0,0,0.55);
+  padding: 2px 8px;
+  border-left: 2px solid var(--green);
+  font-size: 12px;
+  color: var(--green);
+  text-shadow: 0 0 6px var(--green);
+  white-space: nowrap;
+}
+
+#trajectory-canvas {
+  position: fixed;
+  bottom: 14px;
+  left: 14px;
+  z-index: 15;
+  width:  300px;
+  height: 190px;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+#property-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 248px;
+  height: 100%;
+  z-index: 20;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--panel-border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#property-panel::-webkit-scrollbar { width: 4px; }
+#property-panel::-webkit-scrollbar-track  { background: #001a0a; }
+#property-panel::-webkit-scrollbar-thumb  { background: var(--green-dim); border-radius: 2px; }
+
+.panel-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--green);
+  text-align: center;
+  letter-spacing: 1px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.prop-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prop-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.radio-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  padding: 3px 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+
+.radio-group label:hover {
+  background: rgba(0,255,136,0.08);
+}
+
+.radio-group input[type="radio"] {
+  accent-color: var(--green);
+}
+
+.prop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.prop-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--green);
+  height: 4px;
+  cursor: pointer;
+}
+
+.prop-row .val-display {
+  min-width: 68px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--green);
+  white-space: nowrap;
+}
+
+#legal-max {
+  font-size: 11px;
+  color: #aaffcc;
+}
+
+.muzzle-box {
+  background: rgba(0,255,136,0.06);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.muzzle-box .mv-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+#muzzle-velocity {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--green);
+  text-shadow: 0 0 8px var(--green);
+}
+
+#muzzle-energy {
+  font-size: 11px;
+  color: #aaffcc;
+}
+
+#legal-warning {
+  display: none;
+  font-size: 11px;
+  color: var(--warn);
+  font-weight: bold;
+  margin-top: 2px;
+}
+
+.wind-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#wind-dir-icon {
+  font-size: 22px;
+  min-width: 28px;
+  text-align: center;
+  line-height: 1;
+  color: #00e5ff;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--panel-border);
+  margin: 2px 0;
+}
+
+.hint-box {
+  background: rgba(0,0,0,0.4);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.8;
+}
+
+.hint-box strong {
+  color: var(--text);
+}
+  </style>
+</head>
+<body>
+
+  <div id="canvas-container"></div>
+
+  <div id="scope-overlay" class="hidden">
+    <canvas id="scope-canvas"></canvas>
+  </div>
+
+  <div id="hud">
+    <span id="hud-fps">FPS: --</span>
+    <span id="hud-range">射程: -- m</span>
+    <span id="hud-hopup">HopUp: 0%</span>
+  </div>
+
+  <canvas id="trajectory-canvas" width="300" height="190"></canvas>
+
+  <div id="property-panel">
+
+    <div class="panel-title">&#x1F52B; BB Drop Sim</div>
+
+    <div class="prop-section">
+      <div class="prop-label">BB Weight</div>
+      <div class="radio-group">
+        <label><input type="radio" name="bb-weight" value="0.20" checked> 0.20g</label>
+        <label><input type="radio" name="bb-weight" value="0.25"> 0.25g</label>
+        <label><input type="radio" name="bb-weight" value="0.28"> 0.28g</label>
+      </div>
+      <div id="legal-max">法定上限: -- m/s</div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="prop-section">
+      <div class="prop-label">HopUp 強度</div>
+      <div class="prop-row">
+        <input type="range" id="hopup-slider" min="0" max="100" value="0" step="1">
+        <span class="val-display" id="hopup-val">0%</span>
+      </div>
+    </div>
+
+    <div class="prop-section">
+      <div class="prop-label">HopUp 方向 (スピン軸)</div>
+      <div class="prop-row">
+        <input type="range" id="hopup-dir-slider" min="-90" max="90" value="0" step="1">
+        <span class="val-display" id="hopup-dir-val">0°</span>
+      </div>
+      <div id="hopup-dir-icon" style="font-size:11px;color:#aaffcc;text-align:center;padding:2px 0">↑ 中央 (純粋バックスピン)</div>
+      <div style="font-size:10px;color:#556655;display:flex;justify-content:space-between">
+        <span>-90° 左カーブ</span><span>右カーブ +90°</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="prop-section">
+      <div class="prop-label">Base Velocity</div>
+      <div class="prop-row">
+        <input type="range" id="vel-slider" min="10" max="98.99" value="90" step="0.1">
+        <span class="val-display" id="vel-val">90.0 m/s</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="prop-section">
+      <div class="prop-label">Barrel Length</div>
+      <div class="prop-row">
+        <input type="range" id="barrel-slider" min="100" max="650" value="300" step="10">
+        <span class="val-display" id="barrel-val">300 mm</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="muzzle-box">
+      <div class="mv-label">Muzzle Velocity (実初速)</div>
+      <div id="muzzle-velocity">-- m/s</div>
+      <div id="muzzle-energy">E = -- J</div>
+      <div id="legal-warning">&#x26A0; 法定上限を超えています (クランプ中)</div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="prop-section">
+      <div class="prop-label">Wind Speed</div>
+      <div class="prop-row">
+        <input type="range" id="wind-speed-slider" min="0" max="15" value="0" step="0.1">
+        <span class="val-display" id="wind-speed-val">0.0 m/s</span>
+      </div>
+    </div>
+
+    <div class="prop-section">
+      <div class="prop-label">Wind Direction</div>
+      <div class="wind-row">
+        <span id="wind-dir-icon">↑</span>
+        <input type="range" id="wind-dir-slider" min="0" max="359" value="0" step="1" style="flex:1">
+        <span class="val-display" id="wind-dir-val">0°</span>
+      </div>
+      <div style="font-size:10px;color:#556655">0°=正面 90°=右 180°=後 270°=左</div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="hint-box">
+      <strong>左クリック</strong>: 発射<br>
+      <strong>右クリック</strong>: スコープ表示<br>
+      <br>
+      BB弾仕様:<br>
+      &nbsp;直径 6mm / Cd 0.47<br>
+      &nbsp;銃刀法: E &lt; 0.98 J
+    </div>
+
+  </div>
+
+  <!-- Three.js CDN (インターネット接続が必要) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- ══ 全 JS をインライン化 ══ -->
+  <script>
+'use strict';
+
+// ============================================================
+//  physics.js — BBPhysics クラス
+// ============================================================
+
+const BB_CONST = {
+  radius:      0.003,
+  airDensity:  1.293,
+  Cd:          0.47,
+  crossArea:   Math.PI * 0.003 * 0.003,
+  gravity:     9.8,
+  dt:          1 / 60,
+  maxRange:    100,
+  legalMaxJ:   0.98,
+};
+
+function legalMaxVelocity(massKg) {
+  return Math.sqrt(2 * BB_CONST.legalMaxJ / massKg);
+}
+
+const BB_WEIGHTS = {
+  '0.20': 0.0002,
+  '0.25': 0.00025,
+  '0.28': 0.00028,
+};
+
+function barrelCorrectedVelocity(baseVelocity, barrelMm) {
+  return baseVelocity * Math.sqrt(barrelMm / 300);
+}
+
+class BBPhysics {
+  constructor(initialSpeed, omega, direction, mass, windVelocity, spinTiltDeg) {
+    this.mass         = mass;
+    this.omega        = omega;
+    this.wind         = windVelocity || [0, 0, 0];
+    this.spinTiltRad  = (spinTiltDeg || 0) * Math.PI / 180;
+
+    this.position = [0, 1.5, 0];
+    this.velocity = [
+      direction[0] * initialSpeed,
+      direction[1] * initialSpeed,
+      direction[2] * initialSpeed,
+    ];
+
+    this.alive             = true;
+    this.distanceTravelled = 0;
+    this.age               = 0;
+  }
+
+  step() {
+    if (!this.alive) return false;
+
+    const C  = BB_CONST;
+    const dt = C.dt;
+
+    const Fg = this._gravityForce();
+    const Fd = this._dragForce();
+    const FL = this._magnusForce();
+
+    const ax = (Fg[0] + Fd[0] + FL[0]) / this.mass;
+    const ay = (Fg[1] + Fd[1] + FL[1]) / this.mass;
+    const az = (Fg[2] + Fd[2] + FL[2]) / this.mass;
+
+    this.velocity[0] += ax * dt;
+    this.velocity[1] += ay * dt;
+    this.velocity[2] += az * dt;
+
+    this.position[0] += this.velocity[0] * dt;
+    this.position[1] += this.velocity[1] * dt;
+    this.position[2] += this.velocity[2] * dt;
+
+    this.age += dt;
+    this.distanceTravelled = Math.sqrt(
+      this.position[0] * this.position[0] +
+      this.position[2] * this.position[2]
+    );
+
+    if (this.position[1] <= 0 || this.distanceTravelled > C.maxRange) {
+      this.position[1] = Math.max(0, this.position[1]);
+      this.alive = false;
+      return false;
+    }
+
+    return true;
+  }
+
+  _gravityForce() {
+    return [0, -this.mass * BB_CONST.gravity, 0];
+  }
+
+  _dragForce() {
+    const C = BB_CONST;
+    const [vx, vy, vz] = this.velocity;
+    const [wx, wy, wz] = this.wind;
+
+    const rx = vx - wx;
+    const ry = vy - wy;
+    const rz = vz - wz;
+    const rMag = Math.sqrt(rx * rx + ry * ry + rz * rz);
+    if (rMag < 1e-6) return [0, 0, 0];
+
+    const FdMag = 0.5 * C.airDensity * rMag * rMag * C.Cd * C.crossArea;
+    return [
+      -FdMag * (rx / rMag),
+      -FdMag * (ry / rMag),
+      -FdMag * (rz / rMag),
+    ];
+  }
+
+  _magnusForce() {
+    const C = BB_CONST;
+    if (this.omega === 0) return [0, 0, 0];
+
+    const [vx, vy, vz] = this.velocity;
+    const vMag = Math.sqrt(vx * vx + vy * vy + vz * vz);
+    if (vMag < 1e-6) return [0, 0, 0];
+
+    const S      = (this.omega * C.radius) / vMag;
+    const CL     = 2 * S;
+    const FLMag  = 0.5 * C.airDensity * vMag * vMag * CL * C.crossArea;
+
+    const sx = Math.cos(this.spinTiltRad);
+    const sy = Math.sin(this.spinTiltRad);
+
+    const lx = sy * vz;
+    const ly = -sx * vz;
+    const lz = sx * vy - sy * vx;
+    const lMag = Math.sqrt(lx * lx + ly * ly + lz * lz);
+    if (lMag < 1e-6) return [0, 0, 0];
+
+    return [
+      FLMag * (lx / lMag),
+      FLMag * (ly / lMag),
+      FLMag * (lz / lMag),
+    ];
+  }
+}
+
+// ============================================================
+//  scene.js — SceneManager クラス
+// ============================================================
+
+class SceneManager {
+  constructor() {
+    this.renderer     = null;
+    this.scene        = null;
+    this.camera       = null;
+    this._windArrow   = null;
+    this._normalFOV   = 75;
+    this._targetFOV   = 75;
+    this._tweening    = false;
+  }
+
+  init() {
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.shadowMap.enabled = true;
+    document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x87ceeb);
+    this.scene.fog = new THREE.Fog(0x87ceeb, 60, 130);
+
+    this.camera = new THREE.PerspectiveCamera(
+      this._normalFOV,
+      window.innerWidth / window.innerHeight,
+      0.01,
+      500
+    );
+    this.camera.position.set(0, 1.5, 0);
+    this.camera.lookAt(0, 1.5, -100);
+
+    this._buildLighting();
+    this._buildGround();
+    this._buildWindArrow();
+
+    window.addEventListener('resize', () => this._onResize());
+  }
+
+  _buildLighting() {
+    const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+    this.scene.add(ambient);
+
+    const dir = new THREE.DirectionalLight(0xffffff, 0.85);
+    dir.position.set(10, 30, 10);
+    dir.castShadow = true;
+    dir.shadow.mapSize.width  = 1024;
+    dir.shadow.mapSize.height = 1024;
+    dir.shadow.camera.near = 1;
+    dir.shadow.camera.far  = 200;
+    dir.shadow.camera.left = dir.shadow.camera.bottom = -80;
+    dir.shadow.camera.right = dir.shadow.camera.top   =  80;
+    this.scene.add(dir);
+  }
+
+  _buildGround() {
+    const gGround = new THREE.PlaneGeometry(200, 200);
+    const mGround = new THREE.MeshLambertMaterial({ color: 0x3d7a46 });
+    const ground  = new THREE.Mesh(gGround, mGround);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.scene.add(ground);
+
+    const grid = new THREE.GridHelper(100, 20, 0x1a4d22, 0x2d6e35);
+    grid.position.set(0, 0.005, -50);
+    this.scene.add(grid);
+
+    for (let d = 5; d <= 100; d += 5) {
+      const isMajor = (d % 10 === 0);
+
+      const pts = [
+        new THREE.Vector3(-4, 0.015, -d),
+        new THREE.Vector3(4,  0.015, -d),
+      ];
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(pts);
+      const lineMat = new THREE.LineBasicMaterial({
+        color: isMajor ? 0xffffff : 0x999999,
+      });
+      this.scene.add(new THREE.Line(lineGeo, lineMat));
+
+      const sprite = this._makeLabel(`${d}m`, isMajor);
+      sprite.position.set(4.8, 0.8, -d);
+      sprite.scale.set(isMajor ? 2.0 : 1.2, isMajor ? 1.0 : 0.6, 1);
+      this.scene.add(sprite);
+    }
+  }
+
+  _makeLabel(text, bold) {
+    const canvas = document.createElement('canvas');
+    canvas.width  = 128;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 128, 64);
+    ctx.font         = `${bold ? 'bold ' : ''}28px monospace`;
+    ctx.fillStyle    = bold ? '#ffffff' : '#cccccc';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 64, 32);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    return new THREE.Sprite(mat);
+  }
+
+  _buildWindArrow() {
+    const dir    = new THREE.Vector3(0, 0, -1);
+    const origin = new THREE.Vector3(-8, 0.05, -8);
+    this._windArrow = new THREE.ArrowHelper(dir, origin, 0.01, 0x00e5ff, 0.4, 0.3);
+    this.scene.add(this._windArrow);
+    this._windArrow.visible = false;
+  }
+
+  updateWindArrow(windSpeed, windDirDeg) {
+    if (windSpeed < 0.01) {
+      this._windArrow.visible = false;
+      return;
+    }
+
+    const rad = windDirDeg * Math.PI / 180;
+    const dir = new THREE.Vector3(Math.sin(rad), 0, Math.cos(rad)).normalize();
+    this._windArrow.setDirection(dir);
+    this._windArrow.setLength(Math.min(windSpeed * 0.4 + 0.5, 6), 0.4, 0.3);
+    this._windArrow.visible = true;
+  }
+
+  enterScopeView() {
+    this._targetFOV = 30;
+    this._tweening  = true;
+  }
+
+  exitScopeView() {
+    this._targetFOV = this._normalFOV;
+    this._tweening  = true;
+  }
+
+  _updateFOV() {
+    if (!this._tweening) return;
+    const diff = this._targetFOV - this.camera.fov;
+    if (Math.abs(diff) < 0.25) {
+      this.camera.fov = this._targetFOV;
+      this._tweening  = false;
+    } else {
+      this.camera.fov += diff * 0.14;
+    }
+    this.camera.updateProjectionMatrix();
+  }
+
+  _onResize() {
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  renderFrame() {
+    this._updateFOV();
+    this.renderer.render(this.scene, this.camera);
+  }
+}
+
+const sceneManager = new SceneManager();
+
+// ============================================================
+//  bb.js — BBProjectile クラス
+// ============================================================
+
+const BB_COLORS = [0x00ff88, 0xff9900, 0xff44aa, 0x44aaff, 0xffff00];
+let _bbColorIndex = 0;
+
+class BBProjectile {
+  constructor(scene, initialSpeed, omega, camera, mass, windVelocity, spinTiltDeg) {
+    this.scene  = scene;
+    this.alive  = true;
+    this.color  = BB_COLORS[_bbColorIndex % BB_COLORS.length];
+    _bbColorIndex++;
+
+    const dir3 = new THREE.Vector3();
+    camera.getWorldDirection(dir3);
+    const direction = [dir3.x, dir3.y, dir3.z];
+
+    this.physics = new BBPhysics(initialSpeed, omega, direction, mass, windVelocity, spinTiltDeg);
+
+    const geo = new THREE.SphereGeometry(0.015, 8, 6);
+    const mat = new THREE.MeshPhongMaterial({
+      color:     this.color,
+      shininess: 80,
+      emissive:  new THREE.Color(this.color).multiplyScalar(0.15),
+    });
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.mesh.castShadow = true;
+    scene.add(this.mesh);
+
+    this._trailMax      = 120;
+    this._trailPos      = new Float32Array(this._trailMax * 3);
+    this._trailCount    = 0;
+    this._trailGeo      = new THREE.BufferGeometry();
+    this._trailGeo.setAttribute(
+      'position',
+      new THREE.BufferAttribute(this._trailPos, 3)
+    );
+    this._trailGeo.setDrawRange(0, 0);
+    this._trailMat  = new THREE.LineBasicMaterial({
+      color:       this.color,
+      transparent: true,
+      opacity:     0.5,
+    });
+    this._trailLine = new THREE.Line(this._trailGeo, this._trailMat);
+    scene.add(this._trailLine);
+
+    this.positionLog = [];
+    this._finalRange = 0;
+  }
+
+  update() {
+    const stillAlive = this.physics.step();
+
+    const [px, py, pz] = this.physics.position;
+    this.positionLog.push([px, py, pz]);
+
+    if (!stillAlive) {
+      this.alive       = false;
+      this._finalRange = this.physics.distanceTravelled;
+      this.mesh.position.set(px, py, pz);
+      return false;
+    }
+
+    this.mesh.position.set(px, py, pz);
+    this._updateTrail(px, py, pz);
+
+    return true;
+  }
+
+  _updateTrail(px, py, pz) {
+    const max = this._trailMax;
+    const pos = this._trailPos;
+
+    if (this._trailCount < max) {
+      const i   = this._trailCount * 3;
+      pos[i]    = px;
+      pos[i+1]  = py;
+      pos[i+2]  = pz;
+      this._trailCount++;
+    } else {
+      pos.copyWithin(0, 3);
+      const i   = (max - 1) * 3;
+      pos[i]    = px;
+      pos[i+1]  = py;
+      pos[i+2]  = pz;
+    }
+
+    this._trailGeo.attributes.position.needsUpdate = true;
+    this._trailGeo.setDrawRange(0, this._trailCount);
+  }
+
+  dispose() {
+    this.scene.remove(this.mesh);
+    this.mesh.geometry.dispose();
+    this.mesh.material.dispose();
+
+    this.scene.remove(this._trailLine);
+    this._trailGeo.dispose();
+    this._trailMat.dispose();
+  }
+
+  get range() {
+    return this._finalRange;
+  }
+}
+
+// ============================================================
+//  ui.js — TrajectoryGraph + UIManager
+// ============================================================
+
+class TrajectoryGraph {
+  constructor() {
+    this._canvas  = null;
+    this._ctx     = null;
+    this._shots   = [];
+    this._maxShots = 5;
+    this._pad = { top: 24, right: 10, bottom: 28, left: 42 };
+  }
+
+  init(canvasEl) {
+    this._canvas = canvasEl;
+    this._ctx    = canvasEl.getContext('2d');
+  }
+
+  addShot(positionLog, color) {
+    this._shots.push({ log: positionLog.slice(), color });
+    if (this._shots.length > this._maxShots) this._shots.shift();
+  }
+
+  draw(activeBBs) {
+    const c   = this._canvas;
+    const ctx = this._ctx;
+    const W   = c.width;
+    const H   = c.height;
+    const p   = this._pad;
+
+    const gw = W - p.left - p.right;
+    const gh = H - p.top  - p.bottom;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(0,0,0,0.78)';
+    ctx.fillRect(0, 0, W, H);
+
+    this._drawGrid(ctx, gw, gh, p);
+
+    this._shots.forEach((shot, i) => {
+      const alpha = 0.25 + (i / this._maxShots) * 0.5;
+      this._drawPath(ctx, shot.log, shot.color, alpha, gw, gh, p, true);
+    });
+
+    activeBBs.forEach(bb => {
+      if (bb.positionLog.length > 1) {
+        this._drawPath(ctx, bb.positionLog, bb.color, 1.0, gw, gh, p, false);
+      }
+    });
+  }
+
+  _toX(dist, gw) { return this._pad.left + (dist / 100) * gw; }
+  _toY(height, gh) { return this._pad.top + gh - (height / 3) * gh; }
+
+  _drawGrid(ctx, gw, gh, p) {
+    const px0 = p.left;
+    const py0 = p.top;
+    const px1 = p.left + gw;
+    const py1 = p.top  + gh;
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth   = 0.5;
+    for (let d = 0; d <= 100; d += 5) {
+      const x = this._toX(d, gw);
+      ctx.beginPath(); ctx.moveTo(x, py0); ctx.lineTo(x, py1); ctx.stroke();
+    }
+    for (let h = 0; h <= 3; h += 0.5) {
+      const y = this._toY(h, gh);
+      ctx.beginPath(); ctx.moveTo(px0, y); ctx.lineTo(px1, y); ctx.stroke();
+    }
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(px0, py0); ctx.lineTo(px0, py1);
+    ctx.moveTo(px0, py1); ctx.lineTo(px1, py1);
+    ctx.stroke();
+
+    const eyeY = this._toY(1.5, gh);
+    ctx.strokeStyle = 'rgba(255,255,100,0.25)';
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(px0, eyeY); ctx.lineTo(px1, eyeY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle  = '#888';
+    ctx.font       = '9px monospace';
+    ctx.textAlign  = 'center';
+    for (let d = 0; d <= 100; d += 10) {
+      ctx.fillText(`${d}m`, this._toX(d, gw), py1 + 12);
+    }
+
+    ctx.textAlign = 'right';
+    for (let h = 0; h <= 3; h++) {
+      ctx.fillText(`${h}m`, px0 - 4, this._toY(h, gh) + 3);
+    }
+
+    ctx.fillStyle = '#aaffaa';
+    ctx.font      = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('弾道 (側面)', p.left + gw / 2, p.top - 8);
+  }
+
+  _drawPath(ctx, log, color, alpha, gw, gh, p, markImpact) {
+    if (log.length < 2) return;
+
+    const r = (color >> 16) & 0xff;
+    const g = (color >>  8) & 0xff;
+    const b =  color        & 0xff;
+
+    ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+    ctx.lineWidth   = alpha > 0.7 ? 1.5 : 1;
+    ctx.beginPath();
+
+    log.forEach(([px, py, pz], i) => {
+      const dist = Math.sqrt(px * px + pz * pz);
+      const cx   = this._toX(dist, gw);
+      const cy   = this._toY(py,   gh);
+      if (i === 0) ctx.moveTo(cx, cy);
+      else          ctx.lineTo(cx, cy);
+    });
+    ctx.stroke();
+
+    if (markImpact) {
+      const [lx, ly, lz] = log[log.length - 1];
+      const dist = Math.sqrt(lx * lx + lz * lz);
+      const cx   = this._toX(dist, gw);
+      const cy   = this._toY(ly,   gh);
+      const s    = 4;
+      ctx.strokeStyle = `rgba(${r},${g},${b},${Math.min(alpha + 0.3, 1)})`;
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - s, cy - s); ctx.lineTo(cx + s, cy + s);
+      ctx.moveTo(cx + s, cy - s); ctx.lineTo(cx - s, cy + s);
+      ctx.stroke();
+    }
+  }
+}
+
+class UIManager {
+  constructor() {
+    this.mass          = BB_WEIGHTS['0.20'];
+    this.hopupPct      = 0;
+    this.omega         = 0;
+    this.spinTiltDeg   = 0;
+    this.baseVelocity  = 90;
+    this.barrelMm      = 300;
+    this.windSpeed     = 0;
+    this.windDirDeg    = 0;
+    this.muzzleVelocity = 90;
+
+    this._scopeActive  = false;
+    this._scopeCanvas  = null;
+    this._scopeCtx     = null;
+
+    this.trajectoryGraph = new TrajectoryGraph();
+
+    this._fpsBuf  = [];
+    this._lastT   = performance.now();
+    this._lastRange = null;
+  }
+
+  init(sceneManager) {
+    this._sceneManager = sceneManager;
+
+    this.trajectoryGraph.init(document.getElementById('trajectory-canvas'));
+
+    this._scopeCanvas = document.getElementById('scope-canvas');
+    this._scopeCtx    = this._scopeCanvas.getContext('2d');
+    this._resizeScopeCanvas();
+    window.addEventListener('resize', () => this._resizeScopeCanvas());
+
+    document.querySelectorAll('input[name="bb-weight"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        this.mass = BB_WEIGHTS[radio.value];
+        this._updateMuzzleVelocity();
+      });
+    });
+
+    const hopSlider = document.getElementById('hopup-slider');
+    const hopVal    = document.getElementById('hopup-val');
+    hopSlider.addEventListener('input', () => {
+      this.hopupPct = parseInt(hopSlider.value, 10);
+      this.omega    = (this.hopupPct / 100) * 3000;
+      hopVal.textContent = `${this.hopupPct}%`;
+    });
+
+    const hopDirSlider = document.getElementById('hopup-dir-slider');
+    const hopDirVal    = document.getElementById('hopup-dir-val');
+    const hopDirIcon   = document.getElementById('hopup-dir-icon');
+    if (hopDirSlider) {
+      hopDirSlider.addEventListener('input', () => {
+        this.spinTiltDeg = parseInt(hopDirSlider.value, 10);
+        const absVal = Math.abs(this.spinTiltDeg);
+        const dirStr = this.spinTiltDeg === 0 ? '↑ 中央' :
+                       this.spinTiltDeg  >  0 ? `↗ 右 ${absVal}°` :
+                                                `↖ 左 ${absVal}°`;
+        if (hopDirVal)  hopDirVal.textContent  = `${this.spinTiltDeg > 0 ? '+' : ''}${this.spinTiltDeg}°`;
+        if (hopDirIcon) hopDirIcon.textContent  = dirStr;
+      });
+    }
+
+    const velSlider = document.getElementById('vel-slider');
+    const velVal    = document.getElementById('vel-val');
+    velSlider.addEventListener('input', () => {
+      this.baseVelocity = parseFloat(velSlider.value);
+      velVal.textContent = `${this.baseVelocity.toFixed(1)} m/s`;
+      this._updateMuzzleVelocity();
+    });
+
+    const barrelSlider = document.getElementById('barrel-slider');
+    const barrelVal    = document.getElementById('barrel-val');
+    barrelSlider.addEventListener('input', () => {
+      this.barrelMm = parseInt(barrelSlider.value, 10);
+      barrelVal.textContent = `${this.barrelMm} mm`;
+      this._updateMuzzleVelocity();
+    });
+
+    const windSpdSlider = document.getElementById('wind-speed-slider');
+    const windSpdVal    = document.getElementById('wind-speed-val');
+    windSpdSlider.addEventListener('input', () => {
+      this.windSpeed = parseFloat(windSpdSlider.value);
+      windSpdVal.textContent = `${this.windSpeed.toFixed(1)} m/s`;
+      sceneManager.updateWindArrow(this.windSpeed, this.windDirDeg);
+    });
+
+    const windDirSlider = document.getElementById('wind-dir-slider');
+    const windDirVal    = document.getElementById('wind-dir-val');
+    windDirSlider.addEventListener('input', () => {
+      this.windDirDeg = parseInt(windDirSlider.value, 10);
+      windDirVal.textContent = `${this.windDirDeg}°`;
+      this._updateWindDirIcon(this.windDirDeg);
+      sceneManager.updateWindArrow(this.windSpeed, this.windDirDeg);
+    });
+
+    this._updateMuzzleVelocity();
+  }
+
+  _updateMuzzleVelocity() {
+    const raw     = barrelCorrectedVelocity(this.baseVelocity, this.barrelMm);
+    const vMax    = legalMaxVelocity(this.mass);
+    const clamped = Math.min(raw, vMax);
+    const over    = raw > vMax + 0.01;
+
+    this.muzzleVelocity = clamped;
+
+    const legalEl = document.getElementById('legal-max');
+    if (legalEl) legalEl.textContent = `法定上限: ${vMax.toFixed(1)} m/s`;
+
+    const velSlider = document.getElementById('vel-slider');
+    if (velSlider) {
+      velSlider.max = vMax.toFixed(1);
+      if (this.baseVelocity > vMax) {
+        this.baseVelocity = vMax;
+        velSlider.value = vMax;
+        document.getElementById('vel-val').textContent = `${vMax.toFixed(1)} m/s`;
+      }
+    }
+
+    const mvEl  = document.getElementById('muzzle-velocity');
+    const enEl  = document.getElementById('muzzle-energy');
+    const warnEl = document.getElementById('legal-warning');
+    const energy = 0.5 * this.mass * clamped * clamped;
+
+    if (mvEl)   mvEl.textContent  = `${clamped.toFixed(2)} m/s`;
+    if (enEl)   enEl.textContent  = `E = ${energy.toFixed(4)} J`;
+    if (warnEl) {
+      warnEl.style.display = over ? 'block' : 'none';
+    }
+  }
+
+  _updateWindDirIcon(deg) {
+    const arrows = ['↑','↗','→','↘','↓','↙','←','↖'];
+    const idx    = Math.round((deg % 360) / 45) % 8;
+    const el     = document.getElementById('wind-dir-icon');
+    if (el) el.textContent = arrows[idx];
+  }
+
+  toggleScope() {
+    this._scopeActive = !this._scopeActive;
+    const overlay = document.getElementById('scope-overlay');
+
+    if (this._scopeActive) {
+      overlay.classList.remove('hidden');
+      this._drawScopeOverlay();
+      this._sceneManager.enterScopeView();
+    } else {
+      overlay.classList.add('hidden');
+      this._sceneManager.exitScopeView();
+    }
+  }
+
+  get scopeActive() { return this._scopeActive; }
+
+  _drawScopeOverlay() {
+    const ctx = this._scopeCtx;
+    const W   = this._scopeCanvas.width;
+    const H   = this._scopeCanvas.height;
+    const cx  = W / 2;
+    const cy  = H / 2;
+    const R   = Math.min(W, H) * 0.40;
+
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.92)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    const grad = ctx.createRadialGradient(cx, cy, R * 0.55, cx, cy, R);
+    grad.addColorStop(0,   'rgba(0,0,0,0)');
+    grad.addColorStop(0.8, 'rgba(0,0,0,0.1)');
+    grad.addColorStop(1,   'rgba(0,0,0,0.6)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    const gap = 20;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(20,100,20,0.75)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - R, cy);  ctx.lineTo(cx - gap, cy);
+    ctx.moveTo(cx + gap, cy); ctx.lineTo(cx + R, cy);
+    ctx.moveTo(cx, cy - R);  ctx.lineTo(cx, cy - gap);
+    ctx.moveTo(cx, cy + gap); ctx.lineTo(cx, cy + R);
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(30,120,30,0.5)';
+    for (let i = 1; i <= 5; i++) {
+      const off = (R / 5) * i;
+      const hw  = (i % 5 === 0) ? 12 : 6;
+      ctx.beginPath();
+      ctx.moveTo(cx - hw, cy - off); ctx.lineTo(cx + hw, cy - off);
+      ctx.moveTo(cx - hw, cy + off); ctx.lineTo(cx + hw, cy + off);
+      ctx.moveTo(cx - off, cy - hw); ctx.lineTo(cx - off, cy + hw);
+      ctx.moveTo(cx + off, cy - hw); ctx.lineTo(cx + off, cy + hw);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle   = 'rgba(255,0,0,0.92)';
+    ctx.shadowColor = 'rgba(255,0,0,0.6)';
+    ctx.shadowBlur  = 6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth   = 4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  _resizeScopeCanvas() {
+    this._scopeCanvas.width  = window.innerWidth;
+    this._scopeCanvas.height = window.innerHeight;
+    if (this._scopeActive) this._drawScopeOverlay();
+  }
+
+  updateHUD(lastShotRange) {
+    const now = performance.now();
+    const dt  = now - this._lastT;
+    this._lastT = now;
+    this._fpsBuf.push(1000 / dt);
+    if (this._fpsBuf.length > 60) this._fpsBuf.shift();
+    const fps = Math.round(
+      this._fpsBuf.reduce((a, b) => a + b, 0) / this._fpsBuf.length
+    );
+
+    const fpsEl = document.getElementById('hud-fps');
+    if (fpsEl) fpsEl.textContent = `FPS: ${fps}`;
+
+    if (lastShotRange !== null) {
+      this._lastRange = lastShotRange;
+    }
+    const rangeEl = document.getElementById('hud-range');
+    if (rangeEl && this._lastRange !== null) {
+      rangeEl.textContent = `射程: ${this._lastRange.toFixed(1)} m`;
+    }
+
+    const hopEl = document.getElementById('hud-hopup');
+    if (hopEl) hopEl.textContent = `HopUp: ${this.hopupPct}%`;
+  }
+
+  getWindVelocity() {
+    const rad = this.windDirDeg * Math.PI / 180;
+    return [
+      this.windSpeed * Math.sin(rad),
+      0,
+      this.windSpeed * Math.cos(rad),
+    ];
+  }
+}
+
+const uiManager = new UIManager();
+
+// ============================================================
+//  app.js — App メインループ
+// ============================================================
+
+class App {
+  constructor() {
+    this.activeBBs     = [];
+    this._lastRange    = null;
+    this._animFrameId  = null;
+  }
+
+  init() {
+    sceneManager.init();
+    uiManager.init(sceneManager);
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    document.addEventListener('mousedown', e => {
+      if (e.target.closest('#property-panel') ||
+          e.target.closest('#hud')) return;
+
+      if (e.button === 0) this._shootBB();
+      if (e.button === 2) uiManager.toggleScope();
+    });
+
+    this._animate();
+  }
+
+  _shootBB() {
+    const bb = new BBProjectile(
+      sceneManager.scene,
+      uiManager.muzzleVelocity,
+      uiManager.omega,
+      sceneManager.camera,
+      uiManager.mass,
+      uiManager.getWindVelocity(),
+      uiManager.spinTiltDeg
+    );
+    this.activeBBs.push(bb);
+  }
+
+  _animate() {
+    this._animFrameId = requestAnimationFrame(() => this._animate());
+
+    const toRemove = [];
+
+    for (const bb of this.activeBBs) {
+      const alive = bb.update();
+      if (!alive) {
+        toRemove.push(bb);
+        this._lastRange = bb.range;
+        uiManager.trajectoryGraph.addShot(bb.positionLog, bb.color);
+      }
+    }
+
+    for (const bb of toRemove) {
+      bb.dispose();
+      this.activeBBs.splice(this.activeBBs.indexOf(bb), 1);
+    }
+
+    uiManager.trajectoryGraph.draw(this.activeBBs);
+    sceneManager.renderFrame();
+    uiManager.updateHUD(this._lastRange);
+    this._lastRange = null;
+  }
+}
+
+const app = new App();
+window.addEventListener('DOMContentLoaded', () => app.init());
+  </script>
+
+</body>
+</html>
