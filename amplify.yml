@@ -1,0 +1,26 @@
+# ============================================================
+#  AWS Amplify ビルド設定
+#  (ビルドステップなし — 純粋静的サイト)
+#
+#  Amplify Console でこのリポジトリを接続するだけで自動デプロイ。
+#  GitHub → Amplify の連携手順は deploy/AWS_DEPLOY.md を参照。
+# ============================================================
+
+version: 1
+
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "BB Drop Sim — 静的サイト、ビルド不要"
+    build:
+      commands:
+        - echo "ファイルをそのまま配信します"
+  artifacts:
+    baseDirectory: .
+    files:
+      - index.html
+      - css/**/*
+      - js/**/*
+  cache:
+    paths: []

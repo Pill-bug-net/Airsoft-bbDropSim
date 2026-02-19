@@ -60,12 +60,25 @@
 
     <hr class="divider">
 
-    <!-- ── HopUp ── -->
+    <!-- ── HopUp 強度 ── -->
     <div class="prop-section">
-      <div class="prop-label">HopUp</div>
+      <div class="prop-label">HopUp 強度</div>
       <div class="prop-row">
         <input type="range" id="hopup-slider" min="0" max="100" value="0" step="1">
         <span class="val-display" id="hopup-val">0%</span>
+      </div>
+    </div>
+
+    <!-- ── HopUp 方向 (スピン軸傾き) ── -->
+    <div class="prop-section">
+      <div class="prop-label">HopUp 方向 (スピン軸)</div>
+      <div class="prop-row">
+        <input type="range" id="hopup-dir-slider" min="-90" max="90" value="0" step="1">
+        <span class="val-display" id="hopup-dir-val">0°</span>
+      </div>
+      <div id="hopup-dir-icon" style="font-size:11px;color:#aaffcc;text-align:center;padding:2px 0">↑ 中央 (純粋バックスピン)</div>
+      <div style="font-size:10px;color:#556655;display:flex;justify-content:space-between">
+        <span>-90° 左カーブ</span><span>右カーブ +90°</span>
       </div>
     </div>
 
