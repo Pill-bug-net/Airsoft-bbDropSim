@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Airsoft BB Drop Sim</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════
+       Three.js 3D キャンバス (全画面)
+       ══════════════════════════════════════════ -->
+  <div id="canvas-container"></div>
+
+  <!-- ══════════════════════════════════════════
+       スコープオーバーレイ (右クリックで表示)
+       ══════════════════════════════════════════ -->
+  <div id="scope-overlay" class="hidden">
+    <canvas id="scope-canvas"></canvas>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       HUD (左上)
+       ══════════════════════════════════════════ -->
+  <div id="hud">
+    <span id="hud-fps">FPS: --</span>
+    <span id="hud-range">射程: -- m</span>
+    <span id="hud-hopup">HopUp: 0%</span>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       2D 弾道グラフ (左下)
+       ══════════════════════════════════════════ -->
+  <canvas id="trajectory-canvas" width="300" height="190"></canvas>
+
+  <!-- ══════════════════════════════════════════
+       Property パネル (右側)
+       ══════════════════════════════════════════ -->
+  <div id="property-panel">
+
+    <div class="panel-title">&#x1F52B; BB Drop Sim</div>
+
+    <!-- ── BB 重量 ── -->
+    <div class="prop-section">
+      <div class="prop-label">BB Weight</div>
+      <div class="radio-group">
+        <label>
+          <input type="radio" name="bb-weight" value="0.20" checked> 0.20g
+        </label>
+        <label>
+          <input type="radio" name="bb-weight" value="0.25"> 0.25g
+        </label>
+        <label>
+          <input type="radio" name="bb-weight" value="0.28"> 0.28g
+        </label>
+      </div>
+      <div id="legal-max">法定上限: -- m/s</div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── HopUp ── -->
+    <div class="prop-section">
+      <div class="prop-label">HopUp</div>
+      <div class="prop-row">
+        <input type="range" id="hopup-slider" min="0" max="100" value="0" step="1">
+        <span class="val-display" id="hopup-val">0%</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── 基本初速 ── -->
+    <div class="prop-section">
+      <div class="prop-label">Base Velocity</div>
+      <div class="prop-row">
+        <input type="range" id="vel-slider" min="10" max="98.99" value="90" step="0.1">
+        <span class="val-display" id="vel-val">90.0 m/s</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── バレル長 ── -->
+    <div class="prop-section">
+      <div class="prop-label">Barrel Length</div>
+      <div class="prop-row">
+        <input type="range" id="barrel-slider" min="100" max="650" value="300" step="10">
+        <span class="val-display" id="barrel-val">300 mm</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── 実際の初速 (法定クランプ後) ── -->
+    <div class="muzzle-box">
+      <div class="mv-label">Muzzle Velocity (実初速)</div>
+      <div id="muzzle-velocity">-- m/s</div>
+      <div id="muzzle-energy">E = -- J</div>
+      <div id="legal-warning">&#x26A0; 法定上限を超えています (クランプ中)</div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── 風 ── -->
+    <div class="prop-section">
+      <div class="prop-label">Wind Speed</div>
+      <div class="prop-row">
+        <input type="range" id="wind-speed-slider" min="0" max="15" value="0" step="0.1">
+        <span class="val-display" id="wind-speed-val">0.0 m/s</span>
+      </div>
+    </div>
+
+    <div class="prop-section">
+      <div class="prop-label">Wind Direction</div>
+      <div class="wind-row">
+        <span id="wind-dir-icon">↑</span>
+        <input type="range" id="wind-dir-slider" min="0" max="359" value="0" step="1" style="flex:1">
+        <span class="val-display" id="wind-dir-val">0°</span>
+      </div>
+      <div style="font-size:10px;color:#556655">0°=正面 90°=右 180°=後 270°=左</div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── 操作説明 ── -->
+    <div class="hint-box">
+      <strong>左クリック</strong>: 発射<br>
+      <strong>右クリック</strong>: スコープ表示<br>
+      <br>
+      BB弾仕様:<br>
+      &nbsp;直径 6mm / Cd 0.47<br>
+      &nbsp;銃刀法: E &lt; 0.98 J
+    </div>
+
+  </div><!-- /property-panel -->
+
+  <!-- ══════════════════════════════════════════
+       ライブラリ読み込み (Three.js r128)
+       ══════════════════════════════════════════ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- アプリケーション (依存順に読み込む) -->
+  <script src="js/physics.js"></script>
+  <script src="js/scene.js"></script>
+  <script src="js/bb.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>

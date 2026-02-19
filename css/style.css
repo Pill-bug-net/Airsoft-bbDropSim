@@ -1,0 +1,283 @@
+/* ============================================================
+   Airsoft BB Drop Sim — スタイルシート
+   ============================================================ */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --green:       #00ff88;
+  --green-dim:   #00bb66;
+  --green-dark:  #003322;
+  --panel-bg:    rgba(0, 10, 4, 0.88);
+  --panel-border: rgba(0, 255, 136, 0.35);
+  --text:        #ccffdd;
+  --text-dim:    #779988;
+  --warn:        #ff4444;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ──────────────────────────────────────────
+   Three.js キャンバスコンテナ (全画面)
+   ────────────────────────────────────────── */
+#canvas-container {
+  position: fixed;
+  inset: 0;
+}
+
+#canvas-container canvas {
+  display: block;
+  width:  100% !important;
+  height: 100% !important;
+}
+
+/* ──────────────────────────────────────────
+   スコープオーバーレイ (右クリック)
+   ────────────────────────────────────────── */
+#scope-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+#scope-overlay.hidden {
+  display: none;
+}
+
+#scope-canvas {
+  width:  100%;
+  height: 100%;
+}
+
+/* ──────────────────────────────────────────
+   HUD (左上)
+   ────────────────────────────────────────── */
+#hud {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+
+#hud span {
+  display: inline-block;
+  background: rgba(0,0,0,0.55);
+  padding: 2px 8px;
+  border-left: 2px solid var(--green);
+  font-size: 12px;
+  color: var(--green);
+  text-shadow: 0 0 6px var(--green);
+  white-space: nowrap;
+}
+
+/* ──────────────────────────────────────────
+   2D 弾道グラフ (左下)
+   ────────────────────────────────────────── */
+#trajectory-canvas {
+  position: fixed;
+  bottom: 14px;
+  left: 14px;
+  z-index: 15;
+  width:  300px;
+  height: 190px;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* ──────────────────────────────────────────
+   Property パネル (右端、縦スクロール)
+   ────────────────────────────────────────── */
+#property-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 248px;
+  height: 100%;
+  z-index: 20;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--panel-border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* スクロールバー */
+#property-panel::-webkit-scrollbar { width: 4px; }
+#property-panel::-webkit-scrollbar-track  { background: #001a0a; }
+#property-panel::-webkit-scrollbar-thumb  { background: var(--green-dim); border-radius: 2px; }
+
+/* パネルタイトル */
+.panel-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--green);
+  text-align: center;
+  letter-spacing: 1px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+/* セクション */
+.prop-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prop-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ラジオボタングループ */
+.radio-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  padding: 3px 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+
+.radio-group label:hover {
+  background: rgba(0,255,136,0.08);
+}
+
+.radio-group input[type="radio"] {
+  accent-color: var(--green);
+}
+
+/* スライダー */
+.prop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.prop-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--green);
+  height: 4px;
+  cursor: pointer;
+}
+
+.prop-row .val-display {
+  min-width: 68px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--green);
+  white-space: nowrap;
+}
+
+/* 法定上限速度 */
+#legal-max {
+  font-size: 11px;
+  color: #aaffcc;
+}
+
+/* ── 実際の初速ボックス ── */
+.muzzle-box {
+  background: rgba(0,255,136,0.06);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.muzzle-box .mv-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+#muzzle-velocity {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--green);
+  text-shadow: 0 0 8px var(--green);
+}
+
+#muzzle-energy {
+  font-size: 11px;
+  color: #aaffcc;
+}
+
+#legal-warning {
+  display: none;
+  font-size: 11px;
+  color: var(--warn);
+  font-weight: bold;
+  margin-top: 2px;
+}
+
+/* ── 風向きアイコン ── */
+.wind-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#wind-dir-icon {
+  font-size: 22px;
+  min-width: 28px;
+  text-align: center;
+  line-height: 1;
+  color: #00e5ff;
+}
+
+/* ── 区切り線 ── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--panel-border);
+  margin: 2px 0;
+}
+
+/* ── 操作説明 ── */
+.hint-box {
+  background: rgba(0,0,0,0.4);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.8;
+}
+
+.hint-box strong {
+  color: var(--text);
+}
