@@ -40,15 +40,20 @@ function barrelCorrectedVelocity(baseVelocity, barrelMm) {
 class BBPhysics {
   /**
    * @param {number}   initialSpeed  - 初速 m/s (バレル補正・法的クランプ済)
-   * @param {number}   omega         - 角速度 rad/s (HopUp 回転)
+   * @param {number}   omega         - 角速度 rad/s (HopUp 強度)
    * @param {number[]} direction     - 発射方向の単位ベクトル [x,y,z]
    * @param {number}   mass          - BB質量 kg
    * @param {number[]} windVelocity  - 風速ベクトル [wx,wy,wz] m/s
+   * @param {number}   spinTiltDeg   - HopUp スピン軸の傾き(度)
+   *                                   0=純粋バックスピン(上方向揚力)
+   *                                  +45=右傾き(左方向カーブ)
+   *                                  -45=左傾き(右方向カーブ)
    */
-  constructor(initialSpeed, omega, direction, mass, windVelocity) {
-    this.mass = mass;
-    this.omega = omega;
-    this.wind = windVelocity || [0, 0, 0];
+  constructor(initialSpeed, omega, direction, mass, windVelocity, spinTiltDeg) {
+    this.mass         = mass;
+    this.omega        = omega;
+    this.wind         = windVelocity || [0, 0, 0];
+    this.spinTiltRad  = (spinTiltDeg || 0) * Math.PI / 180;
 
     // 状態ベクトル (プレーン配列で Three.js に依存しない)
     this.position = [0, 1.5, 0];  // 目線高さ 1.5m からスタート
@@ -137,9 +142,14 @@ class BBPhysics {
   }
 
   // ----------------------------------------------------------
-  //  マグナス力 (HopUp バックスピン → 揚力)
-  //  回転軸: +X (バックスピン)
-  //  揚力方向: cross([1,0,0], velocity) を正規化
+  //  マグナス力 (HopUp スピン → 揚力)
+  //
+  //  スピン軸: spinAxis = [cos(α), sin(α), 0]
+  //    α=0   → [1,0,0] = 純粋バックスピン → 上方向揚力
+  //    α>0   → 軸が上方向へ傾く → 揚力が左方向へシフト (右ホップ)
+  //    α<0   → 軸が下方向へ傾く → 揚力が右方向へシフト (左ホップ)
+  //
+  //  揚力方向 = cross(spinAxis, velocity)
   //  S  = ω * r / |v|
   //  CL = 2 * S  (簡略モデル)
   //  FL = 0.5 * ρ * |v|² * CL * A * liftDir
@@ -152,17 +162,23 @@ class BBPhysics {
     const vMag = Math.sqrt(vx * vx + vy * vy + vz * vz);
     if (vMag < 1e-6) return [0, 0, 0];
 
-    const S  = (this.omega * C.radius) / vMag;
-    const CL = 2 * S;
+    const S      = (this.omega * C.radius) / vMag;
+    const CL     = 2 * S;
+    const FLMag  = 0.5 * C.airDensity * vMag * vMag * CL * C.crossArea;
 
-    const FLMag = 0.5 * C.airDensity * vMag * vMag * CL * C.crossArea;
+    // スピン軸 (傾き角 α を考慮した汎用計算)
+    const sx = Math.cos(this.spinTiltRad);  // cos(α)
+    const sy = Math.sin(this.spinTiltRad);  // sin(α)
+    // sz = 0 (スピン軸は XY 平面内で回転)
 
-    // cross([1,0,0], [vx,vy,vz]) = [0*vz-0*vy, 0*vx-1*vz, 1*vy-0*vx]
-    //                             = [0, -vz, vy]
-    const lx = 0;
-    const ly = -vz;
-    const lz = vy;
-    const lMag = Math.sqrt(ly * ly + lz * lz);
+    // cross([sx,sy,0], [vx,vy,vz])
+    //   lx = sy*vz - 0*vy = sy*vz
+    //   ly = 0*vx  - sx*vz = -sx*vz
+    //   lz = sx*vy - sy*vx
+    const lx = sy * vz;
+    const ly = -sx * vz;
+    const lz = sx * vy - sy * vx;
+    const lMag = Math.sqrt(lx * lx + ly * ly + lz * lz);
     if (lMag < 1e-6) return [0, 0, 0];
 
     return [

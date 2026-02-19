@@ -13,12 +13,13 @@ class BBProjectile {
   /**
    * @param {THREE.Scene}  scene
    * @param {number}       initialSpeed  - 初速 m/s (法的クランプ済)
-   * @param {number}       omega         - HopUp 角速度 rad/s
+   * @param {number}       omega         - HopUp 角速度 rad/s (強度)
    * @param {THREE.Camera} camera        - 発射方向の取得元
    * @param {number}       mass          - BB 質量 kg
    * @param {number[]}     windVelocity  - 風速ベクトル [wx,wy,wz]
+   * @param {number}       spinTiltDeg   - HopUp スピン軸傾き (度, -90〜+90)
    */
-  constructor(scene, initialSpeed, omega, camera, mass, windVelocity) {
+  constructor(scene, initialSpeed, omega, camera, mass, windVelocity, spinTiltDeg) {
     this.scene  = scene;
     this.alive  = true;
     this.color  = BB_COLORS[_bbColorIndex % BB_COLORS.length];
@@ -30,7 +31,7 @@ class BBProjectile {
     const direction = [dir3.x, dir3.y, dir3.z];
 
     // 物理エンジン
-    this.physics = new BBPhysics(initialSpeed, omega, direction, mass, windVelocity);
+    this.physics = new BBPhysics(initialSpeed, omega, direction, mass, windVelocity, spinTiltDeg);
 
     // ── 3D 球メッシュ (視覚サイズは少し大きめ r=0.015m) ──
     const geo = new THREE.SphereGeometry(0.015, 8, 6);

@@ -169,6 +169,7 @@ class UIManager {
     this.mass          = BB_WEIGHTS['0.20'];  // kg デフォルト 0.20g
     this.hopupPct      = 0;                   // 0–100 %
     this.omega         = 0;                   // rad/s
+    this.spinTiltDeg   = 0;                   // HopUp スピン軸傾き度 (-90〜+90)
     this.baseVelocity  = 90;                  // m/s (ユーザー入力)
     this.barrelMm      = 300;                 // mm
     this.windSpeed     = 0;                   // m/s
@@ -214,7 +215,7 @@ class UIManager {
       });
     });
 
-    // ── HopUp スライダー ──
+    // ── HopUp 強度 スライダー ──
     const hopSlider = document.getElementById('hopup-slider');
     const hopVal    = document.getElementById('hopup-val');
     hopSlider.addEventListener('input', () => {
@@ -222,6 +223,22 @@ class UIManager {
       this.omega    = (this.hopupPct / 100) * 3000;
       hopVal.textContent = `${this.hopupPct}%`;
     });
+
+    // ── HopUp 方向 (スピン軸傾き) スライダー ──
+    const hopDirSlider = document.getElementById('hopup-dir-slider');
+    const hopDirVal    = document.getElementById('hopup-dir-val');
+    const hopDirIcon   = document.getElementById('hopup-dir-icon');
+    if (hopDirSlider) {
+      hopDirSlider.addEventListener('input', () => {
+        this.spinTiltDeg = parseInt(hopDirSlider.value, 10);
+        const absVal = Math.abs(this.spinTiltDeg);
+        const dirStr = this.spinTiltDeg === 0 ? '↑ 中央' :
+                       this.spinTiltDeg  >  0 ? `↗ 右 ${absVal}°` :
+                                                `↖ 左 ${absVal}°`;
+        if (hopDirVal)  hopDirVal.textContent  = `${this.spinTiltDeg > 0 ? '+' : ''}${this.spinTiltDeg}°`;
+        if (hopDirIcon) hopDirIcon.textContent  = dirStr;
+      });
+    }
 
     // ── 基本初速 スライダー ──
     const velSlider = document.getElementById('vel-slider');

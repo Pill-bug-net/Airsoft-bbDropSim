@@ -48,7 +48,8 @@ class App {
       uiManager.omega,
       sceneManager.camera,
       uiManager.mass,
-      uiManager.getWindVelocity()
+      uiManager.getWindVelocity(),
+      uiManager.spinTiltDeg
     );
     this.activeBBs.push(bb);
   }
